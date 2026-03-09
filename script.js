@@ -15,15 +15,15 @@
 // GAMES
 // =====================================
 const games = [
-  { name: "Merger", url: "https://codepen.io/R2FtZU1ha2Vy/full/YPWxWGN", category: "Puzzle", image: "https://iili.io/f4j4SNp.png" },
-  { name: "Shadow Boxing", url: "https://codepen.io/Z-Code-the-lessful/full/OPXxNGb", category: "Action", image: "https://iili.io/f4wNzoG.png" },
-  { name: "Highway Crash", url: "https://codepen.io/Z-Code-the-lessful/full/emzGZqP", category: "Racing", image: "https://iili.io/fP5pJLu.png" },
-  { name: "Badminton Champion", url: "https://codepen.io/Z-Code-the-lessful/full/KwMQvRr", category: "Sports", image: "https://iili.io/ftXhakX.png"},
-  { name: "Tetricks", url: "https://codepen.io/R2FtZU1ha2Vy/full/RNRyqpB", category: "Puzzle", image: "https://iili.io/qBzIIlR.png"},
-  { name: "Meme Rng", url: "https://codepen.io/R2FtZU1ha2Vy/full/zxBmypo", category: "Chill", image: "https://iili.io/q24jm8u.png"},
-  { name: "Build N Defend Tower", url: "https://codepen.io/Z-Code-the-lessful/full/WbGQLqy", category: "Timing", image: "https://iili.io/qCrIy6G.png"},
-  { name: "Square Dodge", url: "https://codepen.io/R2FtZU1ha2Vy/full/YPGWdNJ", category: "Timing", image: "https://iili.io/qT4a3QV.png"},
-  { name: "RingBound", url: "https://codepen.io/R2FtZU1ha2Vy/full/OPRRyXQ", category: "Timing", image: "https://iili.io/qT45h6F.pngg"},
+  { name: "Merger", url: "https://r2ftzu1ha2vy-glitch.github.io/Merger/", category: "Puzzle", image: "https://iili.io/f4j4SNp.png" },
+  { name: "Shadow Boxing", url: "https://r2ftzu1ha2vy-glitch.github.io/Shadow-Boxing/", category: "Action", image: "https://iili.io/f4wNzoG.png" },
+  { name: "Highway Crash", url: "https://r2ftzu1ha2vy-glitch.github.io/Highway-Crash/", category: "Racing", image: "https://iili.io/fP5pJLu.png" },
+  { name: "Badminton Champion", url: "https://r2ftzu1ha2vy-glitch.github.io/Badminton-Champion/", category: "Sports", image: "https://iili.io/ftXhakX.png"},
+  { name: "Tetricks", url: "https://r2ftzu1ha2vy-glitch.github.io/tetricks/", category: "Puzzle", image: "https://iili.io/qBzIIlR.png"},
+  { name: "Meme Rng", url: "https://r2ftzu1ha2vy-glitch.github.io/Meme-Rng/", category: "Chill", image: "https://iili.io/q24jm8u.png"},
+  { name: "Build N Defend Tower", url: "https://r2ftzu1ha2vy-glitch.github.io/Build-N-Defend-Tower/", category: "Timing", image: "https://iili.io/qCrIy6G.png"},
+  { name: "Square Dodge", url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/", category: "Timing", image: "https://iili.io/qT4a3QV.png"},
+  { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Timing", image: "https://iili.io/qT45h6F.pngg"},
 ];
 
 const defaultImg = "https://iili.io/KUgv2G2.png";
@@ -506,4 +506,5 @@ setTimeout(() => {
   setTimeout(() => {
     introOverlay.remove();
   }, 1000);
+
 }, 1000);
