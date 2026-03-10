@@ -238,8 +238,8 @@ document.addEventListener("DOMContentLoaded", () => {
     Sports: "⚽︎",
     Rpg: "🗡",
     Chill: "☕︎",
-    Timing: "⏱︎"
-    "Tower Defense": "𓉱"
+    Timing: "⏱︎",
+    "Tower Defense": "𓉱",
     Reflex: "👁"
   };
 
@@ -512,5 +512,6 @@ setTimeout(() => {
   }, 1000);
 
 }, 1000);
+
 
 
