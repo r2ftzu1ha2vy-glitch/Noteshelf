@@ -239,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     Rpg: "🗡",
     Chill: "☕︎",
     Timing: "⏱︎",
-    Defense: "𓉱",
+    Defense: "⛊",
     Reflex: "👁"
   };
 
@@ -512,6 +512,7 @@ setTimeout(() => {
   }, 1000);
 
 }, 1000);
+
 
 
 
