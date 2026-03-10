@@ -24,7 +24,7 @@ const games = [
   { name: "Build N Defend Tower", url: "https://r2ftzu1ha2vy-glitch.github.io/Build-N-Defend-Tower/", category: "Timing", image: "https://iili.io/qCrIy6G.png"},
   { name: "Square Dodge", url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/", category: "Reflex", image: "https://iili.io/qT4a3QV.png"},
   { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Reflex", image: "https://iili.io/qT45h6F.png"},
-  { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Tower Defense", image: "https://iili.io/qu12an4.png"},
+  { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Defense", image: "https://iili.io/qu12an4.png"},
   { name: "Tap Tempo", url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/", category: "Reflex", image: "https://iili.io/qu12an4.png"},
 ];
 
@@ -227,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ---------- CATEGORY SIDEBAR ----------
-  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Tower Denfese", "Reflex"];
+  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Defense", "Reflex"];
 
   const letters = {
     "All Games": "🖳",
@@ -239,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     Rpg: "🗡",
     Chill: "☕︎",
     Timing: "⏱︎",
-    "Tower Defense": "𓉱",
+    Defense: "𓉱",
     Reflex: "👁"
   };
 
@@ -512,6 +512,4 @@ setTimeout(() => {
   }, 1000);
 
 }, 1000);
-
-
 
