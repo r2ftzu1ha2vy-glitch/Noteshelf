@@ -22,9 +22,10 @@ const games = [
   { name: "Tetricks", url: "https://r2ftzu1ha2vy-glitch.github.io/tetricks/", category: "Puzzle", image: "https://iili.io/qBzIIlR.png"},
   { name: "Meme Rng", url: "https://r2ftzu1ha2vy-glitch.github.io/Meme-Rng/", category: "Chill", image: "https://iili.io/q24jm8u.png"},
   { name: "Build N Defend Tower", url: "https://r2ftzu1ha2vy-glitch.github.io/Build-N-Defend-Tower/", category: "Timing", image: "https://iili.io/qCrIy6G.png"},
-  { name: "Square Dodge", url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/", category: "Puzzle", image: "https://iili.io/qT4a3QV.png"},
-  { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Puzzle", image: "https://iili.io/qT45h6F.png"},
-  { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Puzzle", image: "https://iili.io/qu12an4.png"},
+  { name: "Square Dodge", url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/", category: "Reflex", image: "https://iili.io/qT4a3QV.png"},
+  { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Reflex", image: "https://iili.io/qT45h6F.png"},
+  { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Tower Defense", image: "https://iili.io/qu12an4.png"},
+  { name: "Tap Tempo", url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/", category: "Reflex", image: "https://iili.io/qu12an4.png"},
 ];
 
 const defaultImg = "https://iili.io/KUgv2G2.png";
@@ -226,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ---------- CATEGORY SIDEBAR ----------
-  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing"];
+  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Tower Denfese", "Reflex"];
 
   const letters = {
     "All Games": "🖳",
@@ -235,9 +236,11 @@ document.addEventListener("DOMContentLoaded", () => {
     Racing: "🏎",
     Action: "⚔",
     Sports: "⚽︎",
-    Rpg: "⚔︎",
+    Rpg: "🗡",
     Chill: "☕︎",
     Timing: "⏱︎"
+    "Tower Defense": "𓉱"
+    Reflex: "👁"
   };
 
   categories.forEach(cat => {
@@ -509,4 +512,5 @@ setTimeout(() => {
   }, 1000);
 
 }, 1000);
+
 
