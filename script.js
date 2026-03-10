@@ -25,7 +25,7 @@ const games = [
   { name: "Square Dodge", url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/", category: "Reflex", image: "https://iili.io/qT4a3QV.png"},
   { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Reflex", image: "https://iili.io/qT45h6F.png"},
   { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Defense", image: "https://iili.io/qu12an4.png"},
-  { name: "Tap Tempo", url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/", category: "Reflex", image: "https://iili.io/qAyXAs1.png"},
+  { name: "Tap Tempo", url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/", category: "Reflex", image: ""},
 ];
 
 const defaultImg = "https://iili.io/KUgv2G2.png";
@@ -512,5 +512,6 @@ setTimeout(() => {
   }, 1000);
 
 }, 1000);
+
 
 
