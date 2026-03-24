@@ -26,7 +26,8 @@ const games = [
   { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Reflex", image: "https://iili.io/qT45h6F.png"},
   { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Defense", image: "https://iili.io/qu12an4.png"},
   { name: "Tap Tempo", url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/", category: "Reflex", image: "https://iili.io/qAyXAs1.png"},
-  { name: "Meadow Farm", url: "https://r2ftzu1ha2vy-glitch.github.io/Meadow-Farm/", category: "Chillf", image: "https://iili.io/qcIGKox.png"},
+  { name: "Meadow Farm", url: "https://r2ftzu1ha2vy-glitch.github.io/Meadow-Farm/", category: "Chill", image: "https://iili.io/qcIGKox.png"},
+  { name: "Cosmic Duel", url: "https://r2ftzu1ha2vy-glitch.github.io/Cosmic-Duel/", category: "Action", image: "https://iili.io/qrW1NLB.png"},
 ];
 
 const defaultImg = "https://iili.io/KUgv2G2.png";
