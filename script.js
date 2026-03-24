@@ -229,7 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ---------- CATEGORY SIDEBAR ----------
-  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Defense", "Reflex", "Rage"];
+  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Defense", "Reflex", "Annoying"];
 
   const letters = {
     "All Games": "🖳",
@@ -243,7 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
     Timing: "⏱︎",
     Defense: "⛊",
     Reflex: "👁",
-    Rage: "☠︎︎",
+    Annoying: "☠︎︎",
   };
 
   categories.forEach(cat => {
