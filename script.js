@@ -30,8 +30,7 @@ const games = [
   { name: "Cosmic Duel", url: "https://r2ftzu1ha2vy-glitch.github.io/Cosmic-Duel/", category: "Action", image: "https://iili.io/qrW1NLB.png"},
   { name: "Star Runner", url: "https://r2ftzu1ha2vy-glitch.github.io/Star-Runner/", category: "Reflex", image: "https://iili.io/qrhXT7I.png"},
   { name: "ADventure", url: "https://r2ftzu1ha2vy-glitch.github.io/ADventure/", category: "Annoying", image: "https://iili.io/qZT1JF1.png"},
-  { name: "HexAsteal", url: "https://r2ftzu1ha2vy-glitch.github.io/HexAsteal/", category: "Puzzle", image: "https://iili.io/qZ0cydv.png"},
-];
+  
 
 const defaultImg = "https://iili.io/KUgv2G2.png";
 
