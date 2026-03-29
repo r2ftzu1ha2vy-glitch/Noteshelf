@@ -31,7 +31,7 @@ const games = [
   { name: "Star Runner", url: "https://r2ftzu1ha2vy-glitch.github.io/Star-Runner/", category: "Reflex", image: "https://iili.io/qrhXT7I.png"},
   { name: "ADventure", url: "https://r2ftzu1ha2vy-glitch.github.io/ADventure/", category: "Annoying", image: "https://iili.io/qZT1JF1.png"},
   
-
+];
 const defaultImg = "https://iili.io/KUgv2G2.png";
 
 // =====================================
