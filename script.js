@@ -82,8 +82,8 @@ document.body.appendChild(trailerPopup);
 // Trailer data
 const newGameTrailers = [
   {
-    name: "Meme Rng",
-    trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/202602130944.mp4"
+    name: "HexAsteal",
+    trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/WhatsApp%20Video%202026-03-29%20at%2017.43.30.mp4"
   }
 ];
 
