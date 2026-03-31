@@ -608,7 +608,7 @@ chatInput.addEventListener("keypress", e => {
 });
 
 function sendMessage() {
-  const user = localStorage.getItem("username") || "Guest";
+  const user = localStorage.getItem("username") || "Guest"; // 👈 define user here
   let msg = chatInput.value.trim();
   if (!msg) return;
 
@@ -618,7 +618,7 @@ function sendMessage() {
   newMsgRef.set({
     user,
     text: msg,
-    avatar: localStorage.getItem("avatar_" + user) || defaultImg,
+    avatar: localStorage.getItem("avatar_" + user) || "",
     time: Date.now()
   });
 
