@@ -614,13 +614,20 @@ function sendMessage() {
 
   msg = filterMessage(msg);
 
-  db.ref("messages").push({
+  const newMsgRef = db.ref("messages").push();
+  newMsgRef.set({
     user,
     text: msg,
+    avatar: localStorage.getItem("avatar_" + user) || defaultImg,
     time: Date.now()
   });
 
   chatInput.value = "";
+}
+function deleteMessage(msgKey, row) {
+  if (!confirm("Are you sure you want to delete this message?")) return;
+  db.ref("messages/" + msgKey).remove();
+  row.remove();
 }
 
 db.ref("messages").push({
@@ -632,6 +639,7 @@ db.ref("messages").push({
 
 db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
+  const msgKey = snap.key; // Firebase key
   const currentUser = localStorage.getItem("username") || "Guest";
 
   const row = document.createElement("div");
@@ -646,8 +654,28 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
   // Bubble
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
-  bubble.innerHTML = `<div class="chat-name">${data.user}</div><div>${data.text}</div>`;
+  bubble.innerHTML = `
+    <div class="chat-name">${data.user}</div>
+    <div class="chat-text">${data.text}</div>
+  `;
 
+  // Edit & Delete buttons (only for self)
+  if (data.user === currentUser) {
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "✎";
+    editBtn.className = "chat-edit-btn";
+    editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.className = "chat-delete-btn";
+    delBtn.onclick = () => deleteMessage(msgKey, row);
+
+    bubble.appendChild(editBtn);
+    bubble.appendChild(delBtn);
+  }
+
+  // Layout
   if (data.user === currentUser) {
     row.appendChild(bubble);
     row.appendChild(avatar);
