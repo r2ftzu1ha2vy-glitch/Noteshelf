@@ -518,8 +518,72 @@ setTimeout(() => {
 
 }, 1000);
 
+// 🔥 REPLACE WITH YOUR CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyDPHnqalZ-wV4XPtZi95yT-2pHsZ7gN1dI",
+  authDomain: "noteshelf-5cebe.firebaseapp.com",
+  databaseURL: "https://noteshelf-5cebe-default-rtdb.firebaseio.com/",
+  projectId: "noteshelf-5cebe",
+};
 
+// Init Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
+const chatToggle = document.getElementById("chat-toggle");
+const chatPanel = document.getElementById("chat-panel");
+const chatClose = document.getElementById("chat-close");
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const chatSend = document.getElementById("chat-send");
 
+// Toggle
+chatToggle.onclick = () => chatPanel.style.display = "flex";
+chatClose.onclick = () => chatPanel.style.display = "none";
+
+// 🚫 Simple filter
+const badWords = ["badword1", "badword2", "fuck", "shit"];
+
+function filterMessage(msg) {
+  let clean = msg;
+  badWords.forEach(word => {
+    const regex = new RegExp(word, "gi");
+    clean = clean.replace(regex, "****");
+  });
+  return clean;
+}
+
+// Send message
+chatSend.onclick = sendMessage;
+chatInput.addEventListener("keypress", e => {
+  if (e.key === "Enter") sendMessage();
+});
+
+function sendMessage() {
+  const user = localStorage.getItem("username") || "Guest";
+  let msg = chatInput.value.trim();
+  if (!msg) return;
+
+  msg = filterMessage(msg);
+
+  db.ref("messages").push({
+    user,
+    text: msg,
+    time: Date.now()
+  });
+
+  chatInput.value = "";
+}
+
+// Receive messages (REALTIME)
+db.ref("messages").limitToLast(50).on("child_added", snap => {
+  const data = snap.val();
+
+  const div = document.createElement("div");
+  div.innerHTML = `<b>${data.user}:</b> ${data.text}`;
+
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});
 
 
