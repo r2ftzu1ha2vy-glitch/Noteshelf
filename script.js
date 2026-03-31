@@ -542,7 +542,7 @@ chatToggle.onclick = () => chatPanel.style.display = "flex";
 chatClose.onclick = () => chatPanel.style.display = "none";
 
 // 🚫 Simple filter
-const badWords = ["badword1", "badword2", "fuck", "shit"];
+const badWords = ["nigger", "nigga", "fuck", "shit", "niga", "sex", "bitch"];
 
 function filterMessage(msg) {
   let clean = msg;
@@ -578,12 +578,18 @@ function sendMessage() {
 // Receive messages (REALTIME)
 db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
+  const user = localStorage.getItem("username") || "Guest";
 
   const div = document.createElement("div");
+  div.classList.add("chat-msg");
+
+  if (data.user === user) {
+    div.classList.add("chat-me");
+  }
+
   div.innerHTML = `<b>${data.user}:</b> ${data.text}`;
 
   chatMessages.appendChild(div);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
-
 
