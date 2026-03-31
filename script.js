@@ -324,6 +324,12 @@ document.addEventListener("DOMContentLoaded", () => {
     authMessage.textContent = "";
   });
 
+  const username = authUsername.value.trim();
+const avatar = localStorage.getItem("userAvatar") || defaultImg;
+
+// Save avatar for this username
+localStorage.setItem("avatar_" + username, avatar);
+
   closeAuthBtn?.addEventListener("click", () => {
     console.log("Auth close clicked");
     authPopup.style.display = "none";
@@ -617,37 +623,32 @@ function sendMessage() {
   chatInput.value = "";
 }
 
-// Receive messages (REALTIME)
+db.ref("messages").push({
+  user,
+  text: msg,
+  avatar: localStorage.getItem("avatar_" + user) || defaultImg,
+  time: Date.now()
+});
+
 db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
-  const user = localStorage.getItem("username") || "Guest";
+  const currentUser = localStorage.getItem("username") || "Guest";
 
   const row = document.createElement("div");
-  row.classList.add("chat-row");
-
-  const isMe = data.user === user;
-  row.classList.add(isMe ? "me" : "other");
+  row.classList.add("chat-row", data.user === currentUser ? "me" : "other");
 
   // Avatar
   const avatar = document.createElement("div");
   avatar.className = "chat-avatar";
-
-  const avatarUrl = localStorage.getItem("avatar_" + data.user);
-  if (avatarUrl) {
-    avatar.style.backgroundImage = `url(${avatarUrl})`;
-    avatar.style.backgroundSize = "cover";
-  }
+  avatar.style.backgroundImage = `url(${data.avatar || defaultImg})`;
+  avatar.style.backgroundSize = "cover";
 
   // Bubble
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
-  bubble.innerHTML = `
-    <div class="chat-name">${data.user}</div>
-    <div>${data.text}</div>
-  `;
+  bubble.innerHTML = `<div class="chat-name">${data.user}</div><div>${data.text}</div>`;
 
-  // Layout (left/right)
-  if (isMe) {
+  if (data.user === currentUser) {
     row.appendChild(bubble);
     row.appendChild(avatar);
   } else {
@@ -658,18 +659,6 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
   chatMessages.appendChild(row);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
-const typingIndicator = document.getElementById("typing-indicator");
-const username = localStorage.getItem("username") || "Guest";
-
-// When typing
-chatInput.addEventListener("input", () => {
-  typingRef.child(username).set(true);
-
-  setTimeout(() => {
-    typingRef.child(username).remove();
-  }, 1500);
-});
-
 // Listen to others typing
 typingRef.on("value", snap => {
   const data = snap.val();
