@@ -633,7 +633,7 @@ function deleteMessage(msgKey, row) {
 db.ref("messages").push({
   user,
   text: msg,
-  avatar: localStorage.getItem("avatar_" + user) || defaultImg,
+  avatar: localStorage.getItem("avatar_" + user) || "",
   time: Date.now()
 });
 
