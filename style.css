@@ -634,12 +634,40 @@ iframe::-webkit-scrollbar {
   flex-shrink: 0;
 }
 
-/* Bubble */
+/* Edit & Delete buttons inside chat bubble */
 .chat-bubble {
-  padding: 8px 10px;
+  position: relative;
+  padding: 8px 12px;
   border-radius: 12px;
+  background: #44d244; /* green for user, can override for others */
+  color: #fff;
   max-width: 70%;
-  font-size: 13px;
+  word-wrap: break-word;
+}
+
+/* Buttons container inside bubble */
+.chat-bubble .chat-btns {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.chat-bubble .chat-btns button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.chat-bubble .chat-btns button:hover {
+  opacity: 1;
 }
 
 /* OTHER (LEFT - BLUE) */
