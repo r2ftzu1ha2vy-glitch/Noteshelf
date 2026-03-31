@@ -651,13 +651,30 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
   avatar.style.backgroundImage = `url(${data.avatar || defaultImg})`;
   avatar.style.backgroundSize = "cover";
 
+if (data.user === currentUser) {
   // Bubble
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
   bubble.innerHTML = `
     <div class="chat-name">${data.user}</div>
     <div class="chat-text">${data.text}</div>
+    <div class="chat-btns">
+      <button class="chat-edit-btn">✎</button>
+      <button class="chat-delete-btn">🗑</button>
+    </div>
   `;
+
+  // Add button listeners
+  const editBtn = bubble.querySelector(".chat-edit-btn");
+  const delBtn = bubble.querySelector(".chat-delete-btn");
+
+  editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
+  delBtn.onclick = () => deleteMessage(msgKey, row);
+
+  // Layout
+  row.appendChild(bubble);
+  row.appendChild(avatar);
+}
 
   // Edit & Delete buttons (only for self)
   if (data.user === currentUser) {
