@@ -608,7 +608,7 @@ chatInput.addEventListener("keypress", e => {
 });
 
 function sendMessage() {
-  const user = localStorage.getItem("username") || "Guest"; // define user
+  const user = localStorage.getItem("username") || "Guest"; // define user here
   let msg = chatInput.value.trim();
   if (!msg) return;
 
@@ -616,7 +616,7 @@ function sendMessage() {
 
   const newMsgRef = db.ref("messages").push();
   newMsgRef.set({
-    user,
+    user, // ✅ defined here
     text: msg,
     avatar: localStorage.getItem("avatar_" + user) || "",
     time: Date.now()
@@ -625,18 +625,33 @@ function sendMessage() {
   chatInput.value = "";
 }
 
+
 db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
-  const msgKey = snap.key; // ← THIS gives the correct key
-
+  const msgKey = snap.key; // Firebase key
   const currentUser = localStorage.getItem("username") || "Guest";
-  ...
-  // then you can safely attach:
-  if (data.user === currentUser) {
-    editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
-    delBtn.onclick = () => deleteMessage(msgKey, row);
+
+  const row = document.createElement("div");
+  row.classList.add("chat-row");
+
+  const isMe = data.user === currentUser;
+  row.classList.add(isMe ? "me" : "other");
+
+  // Avatar
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+  if (data.avatar) {
+    avatar.style.backgroundImage = `url(${data.avatar})`;
+    avatar.style.backgroundSize = "cover";
   }
-});
+
+  // Bubble
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.innerHTML = `
+    <div class="chat-name">${data.user}</div>
+    <div class="chat-text">${data.text}</div>
+  `;
 
   // Edit & Delete buttons (only for self)
   if (data.user === currentUser) {
@@ -654,8 +669,8 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
     bubble.appendChild(delBtn);
   }
 
-  // Layout
-  if (data.user === currentUser) {
+  // Append in proper order
+  if (isMe) {
     row.appendChild(bubble);
     row.appendChild(avatar);
   } else {
@@ -665,7 +680,7 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
 
   chatMessages.appendChild(row);
   chatMessages.scrollTop = chatMessages.scrollHeight;
-);
+}); // ✅ Correct closing
 // Listen to others typing
 typingRef.on("value", snap => {
   const data = snap.val();
