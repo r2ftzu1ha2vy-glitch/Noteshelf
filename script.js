@@ -536,7 +536,49 @@ const chatClose = document.getElementById("chat-close");
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
 const chatSend = document.getElementById("chat-send");
+const typingRef = db.ref("typing");
 
+db.ref("messages").limitToLast(50).on("child_added", snap => {
+  const data = snap.val();
+  const user = localStorage.getItem("username") || "Guest";
+
+  const row = document.createElement("div");
+  row.classList.add("chat-row");
+
+  const isMe = data.user === user;
+  row.classList.add(isMe ? "me" : "other");
+
+  // Avatar
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+
+  // optional: use stored avatar
+  const avatarUrl = localStorage.getItem("avatar_" + data.user);
+  if (avatarUrl) {
+    avatar.style.backgroundImage = `url(${avatarUrl})`;
+    avatar.style.backgroundSize = "cover";
+  }
+
+  // Bubble
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.innerHTML = `
+    <div class="chat-name">${data.user}</div>
+    <div>${data.text}</div>
+  `;
+
+  // Append order
+  if (isMe) {
+    row.appendChild(bubble);
+    row.appendChild(avatar);
+  } else {
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+  }
+
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});
 // Toggle
 chatToggle.onclick = () => chatPanel.style.display = "flex";
 chatClose.onclick = () => chatPanel.style.display = "none";
@@ -580,16 +622,67 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
   const user = localStorage.getItem("username") || "Guest";
 
-  const div = document.createElement("div");
-  div.classList.add("chat-msg");
+  const row = document.createElement("div");
+  row.classList.add("chat-row");
 
-  if (data.user === user) {
-    div.classList.add("chat-me");
+  const isMe = data.user === user;
+  row.classList.add(isMe ? "me" : "other");
+
+  // Avatar
+  const avatar = document.createElement("div");
+  avatar.className = "chat-avatar";
+
+  const avatarUrl = localStorage.getItem("avatar_" + data.user);
+  if (avatarUrl) {
+    avatar.style.backgroundImage = `url(${avatarUrl})`;
+    avatar.style.backgroundSize = "cover";
   }
 
-  div.innerHTML = `<b>${data.user}:</b> ${data.text}`;
+  // Bubble
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble";
+  bubble.innerHTML = `
+    <div class="chat-name">${data.user}</div>
+    <div>${data.text}</div>
+  `;
 
-  chatMessages.appendChild(div);
+  // Layout (left/right)
+  if (isMe) {
+    row.appendChild(bubble);
+    row.appendChild(avatar);
+  } else {
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+  }
+
+  chatMessages.appendChild(row);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 });
+const typingIndicator = document.getElementById("typing-indicator");
+const username = localStorage.getItem("username") || "Guest";
 
+// When typing
+chatInput.addEventListener("input", () => {
+  typingRef.child(username).set(true);
+
+  setTimeout(() => {
+    typingRef.child(username).remove();
+  }, 1500);
+});
+
+// Listen to others typing
+typingRef.on("value", snap => {
+  const data = snap.val();
+  if (!data) {
+    typingIndicator.textContent = "";
+    return;
+  }
+
+  const usersTyping = Object.keys(data).filter(u => u !== username);
+
+  if (usersTyping.length > 0) {
+    typingIndicator.textContent = usersTyping.join(", ") + " typing...";
+  } else {
+    typingIndicator.textContent = "";
+  }
+});
