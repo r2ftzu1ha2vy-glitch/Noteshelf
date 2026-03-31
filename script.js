@@ -697,7 +697,7 @@ db.ref("messages").limitToLast(50).on("child_added", snap => {
 
   chatMessages.appendChild(row);
   chatMessages.scrollTop = chatMessages.scrollHeight;
-});
+);
 // Listen to others typing
 typingRef.on("value", snap => {
   const data = snap.val();
