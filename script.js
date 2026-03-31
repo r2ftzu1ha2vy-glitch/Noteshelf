@@ -608,7 +608,7 @@ chatInput.addEventListener("keypress", e => {
 });
 
 function sendMessage() {
-  const user = localStorage.getItem("username") || "Guest"; // 👈 define user here
+  const user = localStorage.getItem("username") || "Guest"; // define user
   let msg = chatInput.value.trim();
   if (!msg) return;
 
@@ -623,11 +623,6 @@ function sendMessage() {
   });
 
   chatInput.value = "";
-}
-function deleteMessage(msgKey, row) {
-  if (!confirm("Are you sure you want to delete this message?")) return;
-  db.ref("messages/" + msgKey).remove();
-  row.remove();
 }
 
 db.ref("messages").push({
