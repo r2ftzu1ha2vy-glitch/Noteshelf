@@ -625,49 +625,17 @@ function sendMessage() {
   chatInput.value = "";
 }
 
-db.ref("messages").push({
-  user,
-  text: msg,
-  avatar: localStorage.getItem("avatar_" + user) || "",
-  time: Date.now()
-});
-
 db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
-  const currentUser = localStorage.getItem("username") || "Guest"; // 👈 define current user
+  const msgKey = snap.key; // ← THIS gives the correct key
 
-  const row = document.createElement("div");
-  row.classList.add("chat-row");
-
-  const isMe = data.user === currentUser;
-  row.classList.add(isMe ? "me" : "other");
-
-  // Avatar
-  const avatar = document.createElement("div");
-  avatar.className = "chat-avatar";
-  if (data.avatar) {
-    avatar.style.backgroundImage = `url(${data.avatar})`;
-    avatar.style.backgroundSize = "cover";
+  const currentUser = localStorage.getItem("username") || "Guest";
+  ...
+  // then you can safely attach:
+  if (data.user === currentUser) {
+    editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
+    delBtn.onclick = () => deleteMessage(msgKey, row);
   }
-
-  // Bubble
-  const bubble = document.createElement("div");
-  bubble.className = "chat-bubble";
-  bubble.innerHTML = `
-    <div class="chat-name">${data.user}</div>
-    <div class="chat-text">${data.text}</div>
-  `;
-
-  if (isMe) {
-    row.appendChild(bubble);
-    row.appendChild(avatar);
-  } else {
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-  }
-
-  chatMessages.appendChild(row);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
   // Edit & Delete buttons (only for self)
