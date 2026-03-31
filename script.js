@@ -639,42 +639,41 @@ db.ref("messages").push({
 
 db.ref("messages").limitToLast(50).on("child_added", snap => {
   const data = snap.val();
-  const msgKey = snap.key; // Firebase key
-  const currentUser = localStorage.getItem("username") || "Guest";
+  const currentUser = localStorage.getItem("username") || "Guest"; // 👈 define current user
 
   const row = document.createElement("div");
-  row.classList.add("chat-row", data.user === currentUser ? "me" : "other");
+  row.classList.add("chat-row");
+
+  const isMe = data.user === currentUser;
+  row.classList.add(isMe ? "me" : "other");
 
   // Avatar
   const avatar = document.createElement("div");
   avatar.className = "chat-avatar";
-  avatar.style.backgroundImage = `url(${data.avatar || defaultImg})`;
-  avatar.style.backgroundSize = "cover";
+  if (data.avatar) {
+    avatar.style.backgroundImage = `url(${data.avatar})`;
+    avatar.style.backgroundSize = "cover";
+  }
 
-if (data.user === currentUser) {
   // Bubble
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
   bubble.innerHTML = `
     <div class="chat-name">${data.user}</div>
     <div class="chat-text">${data.text}</div>
-    <div class="chat-btns">
-      <button class="chat-edit-btn">✎</button>
-      <button class="chat-delete-btn">🗑</button>
-    </div>
   `;
 
-  // Add button listeners
-  const editBtn = bubble.querySelector(".chat-edit-btn");
-  const delBtn = bubble.querySelector(".chat-delete-btn");
+  if (isMe) {
+    row.appendChild(bubble);
+    row.appendChild(avatar);
+  } else {
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+  }
 
-  editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
-  delBtn.onclick = () => deleteMessage(msgKey, row);
-
-  // Layout
-  row.appendChild(bubble);
-  row.appendChild(avatar);
-}
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+});
 
   // Edit & Delete buttons (only for self)
   if (data.user === currentUser) {
