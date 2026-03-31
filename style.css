@@ -608,3 +608,62 @@ iframe::-webkit-scrollbar {
 #chat-send:hover {
   transform: scale(1.05);
 }
+/* =========================
+   MESSAGE ROW (AVATAR + BUBBLE)
+========================= */
+.chat-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.chat-row.me {
+  justify-content: flex-end;
+}
+
+.chat-row.other {
+  justify-content: flex-start;
+}
+
+/* Avatar */
+.chat-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #444;
+  flex-shrink: 0;
+}
+
+/* Bubble */
+.chat-bubble {
+  padding: 8px 10px;
+  border-radius: 12px;
+  max-width: 70%;
+  font-size: 13px;
+}
+
+/* OTHER (LEFT - BLUE) */
+.chat-row.other .chat-bubble {
+  background: linear-gradient(135deg, #3a8dff, #00c6ff);
+  color: white;
+}
+
+/* YOU (RIGHT - GREEN) */
+.chat-row.me .chat-bubble {
+  background: linear-gradient(135deg, #00c853, #64dd17);
+  color: white;
+}
+
+/* Username */
+.chat-name {
+  font-weight: bold;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* Typing indicator */
+#typing-indicator {
+  font-size: 12px;
+  opacity: 0.6;
+  padding: 4px 10px;
+}
