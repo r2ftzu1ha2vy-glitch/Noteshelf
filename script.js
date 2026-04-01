@@ -84,6 +84,10 @@ const newGameTrailers = [
   {
     name: "HexAsteal",
     trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/WhatsApp%20Video%202026-03-29%20at%2017.43.30.mp4"
+  },
+  {
+    name: "8-Ball Billiards",
+    trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/8-Ball%20Billiards%20(1).mp4"
   }
 ];
 
