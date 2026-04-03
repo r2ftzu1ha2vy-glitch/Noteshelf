@@ -1,703 +1,484 @@
-// =====================================
-// OPTIONAL: SUPABASE (DISABLED FOR CODEPEN)
-// =====================================
-// If you want Supabase later, uncomment and move this into a <script type="module">
-// in the HTML, or use the UMD build. For now it's disabled to avoid "import" errors
-// in CodePen's JS panel.
+  // =====================================
+  // GAMES
+  // =====================================
+  const games = [
+    { name: "Merger",               url: "https://r2ftzu1ha2vy-glitch.github.io/Merger/",               category: "Puzzle",   image: "https://iili.io/f4j4SNp.png" },
+    { name: "Shadow Boxing",        url: "https://r2ftzu1ha2vy-glitch.github.io/Shadow-Boxing/",        category: "Action",   image: "https://iili.io/f4wNzoG.png" },
+    { name: "Highway Crash",        url: "https://r2ftzu1ha2vy-glitch.github.io/Highway-Crash/",        category: "Racing",   image: "https://iili.io/fP5pJLu.png" },
+    { name: "Badminton Champion",   url: "https://r2ftzu1ha2vy-glitch.github.io/Badminton-Champion/",   category: "Sports",   image: "https://iili.io/ftXhakX.png" },
+    { name: "Tetricks",             url: "https://r2ftzu1ha2vy-glitch.github.io/tetricks/",             category: "Puzzle",   image: "https://iili.io/qBzIIlR.png" },
+    { name: "Meme Rng",             url: "https://r2ftzu1ha2vy-glitch.github.io/Meme-Rng/",             category: "Chill",    image: "https://iili.io/q24jm8u.png" },
+    { name: "Build N Defend Tower", url: "https://r2ftzu1ha2vy-glitch.github.io/Build-N-Defend-Tower/", category: "Timing",   image: "https://iili.io/qCrIy6G.png" },
+    { name: "Square Dodge",         url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/",         category: "Reflex",   image: "https://iili.io/qT4a3QV.png" },
+    { name: "RingBound",            url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/",            category: "Reflex",   image: "https://iili.io/qT45h6F.png" },
+    { name: "Pizza Panic",          url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/",          category: "Defense",  image: "https://iili.io/qu12an4.png" },
+    { name: "Tap Tempo",            url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/",            category: "Reflex",   image: "https://iili.io/qAyXAs1.png" },
+    { name: "Meadow Farm",          url: "https://r2ftzu1ha2vy-glitch.github.io/Meadow-Farm/",          category: "Chill",    image: "https://iili.io/qcIGKox.png" },
+    { name: "Cosmic Duel",          url: "https://r2ftzu1ha2vy-glitch.github.io/Cosmic-Duel/",          category: "Action",   image: "https://iili.io/qrW1NLB.png" },
+    { name: "Star Runner",          url: "https://r2ftzu1ha2vy-glitch.github.io/Star-Runner/",          category: "Reflex",   image: "https://iili.io/qrhXT7I.png" },
+    { name: "ADventure",            url: "https://r2ftzu1ha2vy-glitch.github.io/ADventure/",            category: "Annoying", image: "https://iili.io/qZT1JF1.png" },
+  ];
 
-// import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+  const defaultImg = "https://iili.io/KUgv2G2.png";
 
-// const supabaseUrl = 'https://infsmlhsldmsfhvphyck.supabase.co';
-// const supabaseKey = '...YOUR KEY...';
-// const supabase = createClient(supabaseUrl, supabaseKey);
+  // =====================================
+  // TRAILER POPUP
+  // =====================================
+  const trailerPopup = document.createElement("div");
+  trailerPopup.id = "trailer-popup";
+  Object.assign(trailerPopup.style, {
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    padding: "24px",
+    display: "none",
+    zIndex: "9999",
+    maxWidth: "90%",
+    maxHeight: "80%",
+    overflowY: "auto",
+    transition: "0.3s",
+  });
 
-// =====================================
-// GAMES
-// =====================================
-const games = [
-  { name: "Merger", url: "https://r2ftzu1ha2vy-glitch.github.io/Merger/", category: "Puzzle", image: "https://iili.io/f4j4SNp.png" },
-  { name: "Shadow Boxing", url: "https://r2ftzu1ha2vy-glitch.github.io/Shadow-Boxing/", category: "Action", image: "https://iili.io/f4wNzoG.png" },
-  { name: "Highway Crash", url: "https://r2ftzu1ha2vy-glitch.github.io/Highway-Crash/", category: "Racing", image: "https://iili.io/fP5pJLu.png" },
-  { name: "Badminton Champion", url: "https://r2ftzu1ha2vy-glitch.github.io/Badminton-Champion/", category: "Sports", image: "https://iili.io/ftXhakX.png"},
-  { name: "Tetricks", url: "https://r2ftzu1ha2vy-glitch.github.io/tetricks/", category: "Puzzle", image: "https://iili.io/qBzIIlR.png"},
-  { name: "Meme Rng", url: "https://r2ftzu1ha2vy-glitch.github.io/Meme-Rng/", category: "Chill", image: "https://iili.io/q24jm8u.png"},
-  { name: "Build N Defend Tower", url: "https://r2ftzu1ha2vy-glitch.github.io/Build-N-Defend-Tower/", category: "Timing", image: "https://iili.io/qCrIy6G.png"},
-  { name: "Square Dodge", url: "https://r2ftzu1ha2vy-glitch.github.io/Square-Dodge/", category: "Reflex", image: "https://iili.io/qT4a3QV.png"},
-  { name: "RingBound", url: "https://r2ftzu1ha2vy-glitch.github.io/RingBound/", category: "Reflex", image: "https://iili.io/qT45h6F.png"},
-  { name: "Pizza Panic", url: "https://r2ftzu1ha2vy-glitch.github.io/Pizza-Panic/", category: "Defense", image: "https://iili.io/qu12an4.png"},
-  { name: "Tap Tempo", url: "https://r2ftzu1ha2vy-glitch.github.io/Tap-Tempo/", category: "Reflex", image: "https://iili.io/qAyXAs1.png"},
-  { name: "Meadow Farm", url: "https://r2ftzu1ha2vy-glitch.github.io/Meadow-Farm/", category: "Chill", image: "https://iili.io/qcIGKox.png"},
-  { name: "Cosmic Duel", url: "https://r2ftzu1ha2vy-glitch.github.io/Cosmic-Duel/", category: "Action", image: "https://iili.io/qrW1NLB.png"},
-  { name: "Star Runner", url: "https://r2ftzu1ha2vy-glitch.github.io/Star-Runner/", category: "Reflex", image: "https://iili.io/qrhXT7I.png"},
-  { name: "ADventure", url: "https://r2ftzu1ha2vy-glitch.github.io/ADventure/", category: "Annoying", image: "https://iili.io/qZT1JF1.png"},
-  
-];
-const defaultImg = "https://iili.io/KUgv2G2.png";
+  const closeTrailerBtn = document.createElement("button");
+  closeTrailerBtn.textContent = "✖  Close";
+  closeTrailerBtn.style.marginBottom = "16px";
 
-// =====================================
-// TRAILER POPUP (UI ONLY)
-// =====================================
-const trailerPopup = document.createElement("div");
-trailerPopup.id = "trailer-popup";
-Object.assign(trailerPopup.style, {
-  position: "fixed",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  background: "#111",
-  padding: "20px",
-  borderRadius: "12px",
-  boxShadow: "0 0 25px rgba(0,0,0,0.7)",
-  display: "none",
-  zIndex: "9999",
-  maxWidth: "90%",
-  maxHeight: "80%",
-  overflowY: "auto",
-  color: "#fff",
-  transition: "0.3s",
-  fontFamily: "'Arial', sans-serif"
-});
-
-// Close button for trailer popup
-const closeTrailerBtn = document.createElement("button");
-closeTrailerBtn.textContent = "✖ Close";
-Object.assign(closeTrailerBtn.style, {
-  display: "block",
-  marginBottom: "15px",
-  padding: "6px 12px",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-  background: "#444",
-  color: "#fff",
-  fontWeight: "bold",
-  transition: "0.3s"
-});
-closeTrailerBtn.addEventListener("mouseover", () => (closeTrailerBtn.style.background = "#666"));
-closeTrailerBtn.addEventListener("mouseout", () => (closeTrailerBtn.style.background = "#444"));
-
-trailerPopup.appendChild(closeTrailerBtn);
-document.body.appendChild(trailerPopup);
-
-// Trailer data
-const newGameTrailers = [
-  {
-    name: "HexAsteal",
-    trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/WhatsApp%20Video%202026-03-29%20at%2017.43.30.mp4"
-  },
-  {
-    name: "8-Ball Billiards",
-    trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/8-Ball%20Billiards%20(1).mp4"
+  function closeTrailerPopup() {
+    trailerPopup.querySelectorAll("video").forEach(v => { v.pause(); v.currentTime = 0; });
+    trailerPopup.style.display = "none";
   }
-];
 
-// Close trailer popup helper
-function closeTrailerPopup() {
-  // Stop all videos
-  const videos = trailerPopup.querySelectorAll("video");
-  videos.forEach(video => {
-    video.pause();
-    video.currentTime = 0;
+  closeTrailerBtn.addEventListener("click", closeTrailerPopup);
+  trailerPopup.appendChild(closeTrailerBtn);
+  document.body.appendChild(trailerPopup);
+
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape" && trailerPopup.style.display === "block") closeTrailerPopup();
   });
 
-  trailerPopup.style.display = "none";
-}
+  const newGameTrailers = [
+    { name: "HexAsteal",      trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/WhatsApp%20Video%202026-03-29%20at%2017.43.30.mp4" },
+    { name: "8-Ball Billiards", trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/8-Ball%20Billiards%20(1).mp4" },
+  ];
 
-// Close button
-closeTrailerBtn.addEventListener("click", closeTrailerPopup);
+  // =====================================
+  // DOM READY
+  // =====================================
+  document.addEventListener("DOMContentLoaded", () => {
+    const gameListDiv     = document.getElementById("game-list");
+    const searchBar       = document.getElementById("search-bar");
+    const categorySidebar = document.getElementById("category-sidebar");
 
-// Close on outside click
-window.addEventListener("click", (e) => {
-  if (e.target === trailerPopup) closeTrailerPopup();
-});
+    const signupBtn       = document.getElementById("signup-btn");
+    const loginBtn        = document.getElementById("login-btn");
+    const logoutBtn       = document.getElementById("logout-btn");
+    const authPopup       = document.getElementById("auth-popup");
+    const authTitle       = document.getElementById("auth-title");
+    const authUsername    = document.getElementById("auth-username");
+    const authPassword    = document.getElementById("auth-password");
+    const authSubmit      = document.getElementById("auth-submit");
+    const authMessage     = document.getElementById("auth-message");
+    const closeAuthBtn    = document.getElementById("close-auth");
+    const userAvatar      = document.getElementById("user-avatar");
+    const usernameDisplay = document.getElementById("username-display");
+    const adminPanel      = document.getElementById("admin-panel");
+    const avatarInput     = document.getElementById("auth-avatar");
+    const avatarPreview   = document.getElementById("avatar-preview");
+    const globalMsgPopup  = document.getElementById("global-message-popup");
 
-// Close with ESC key
-window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && trailerPopup.style.display === "block") closeTrailerPopup();
-});
+    const usersKey   = "users";
+    const adminUsers = ["R2FtZU1ha2Vy", "GDFlame05"];
+    let users        = JSON.parse(localStorage.getItem(usersKey) || "{}");
 
-// =====================================
-// DOM RENDERING & EVENT HANDLERS
-// =====================================
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOMContentLoaded fired");
+    // ── Create game card ──
+    function createGameButton(game) {
+      const btn = document.createElement("button");
+      btn.className = "game-button";
 
-  const gameListDiv      = document.getElementById("game-list");
-  const searchBar        = document.getElementById("search-bar");
-  const categorySidebar  = document.getElementById("category-sidebar");
-  const recommendedBtn   = document.getElementById("recommended-btn");
+      const img = document.createElement("img");
+      img.src   = game.image || defaultImg;
+      img.alt   = game.name;
 
-  const signupBtn        = document.getElementById("signup-btn");
-  const loginBtn         = document.getElementById("login-btn");
-  const logoutBtn        = document.getElementById("logout-btn");
-  const authPopup        = document.getElementById("auth-popup");
-  const authTitle        = document.getElementById("auth-title");
-  const authUsername     = document.getElementById("auth-username");
-  const authPassword     = document.getElementById("auth-password");
-  const authSubmit       = document.getElementById("auth-submit");
-  const authMessage      = document.getElementById("auth-message");
-  const closeAuthBtn     = document.getElementById("close-auth");
-  const userAvatar       = document.getElementById("user-avatar");
-  const usernameDisplay  = document.getElementById("username-display");
-  const adminPanel       = document.getElementById("admin-panel");
-  const avatarInput      = document.getElementById("auth-avatar");
-  const avatarPreview    = document.getElementById("avatar-preview");
-  const globalMsgPopup   = document.getElementById("global-message-popup");
+      const label = document.createElement("div");
+      label.textContent = game.name;
 
-  const usersKey   = "users";
-  const adminUsers = ["R2FtZU1ha2Vy", "GDFlame05"];
-  let users        = JSON.parse(localStorage.getItem(usersKey) || "{}");
+      btn.appendChild(img);
+      btn.appendChild(label);
 
-  console.log("Buttons found:", {
-    signupBtn: !!signupBtn,
-    loginBtn: !!loginBtn,
-    logoutBtn: !!logoutBtn,
-    trailerBtn: !!document.getElementById("trailer-btn")
-  });
+      btn.onclick = () => window.open(game.url, "_blank");
+      return btn;
+    }
 
-  // ---------- CREATE GAME BUTTON ----------
-  function createGameButton(game) {
-    const btn = document.createElement("button");
-    btn.className = "game-button";
-    Object.assign(btn.style, {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "140px",
-      height: "160px",
-      margin: "6px",
-      padding: "8px",
-      border: "none",
-      borderRadius: "10px",
-      cursor: "pointer",
-      background: "#222",
-      color: "#fff",
-      transition: "0.3s"
-    });
+    // ── Render ──
+    function renderGames(filter = "") {
+      gameListDiv.innerHTML = "";
+      games
+        .filter(g => g.name.toLowerCase().includes(filter.toLowerCase()))
+        .forEach(g => gameListDiv.appendChild(createGameButton(g)));
+    }
 
-    btn.addEventListener("mouseover", () => (btn.style.background = "#444"));
-    btn.addEventListener("mouseout", () => (btn.style.background = "#222"));
+    function renderGamesByCategory(category) {
+      gameListDiv.innerHTML = "";
+      games
+        .filter(g => g.category.toLowerCase() === category.toLowerCase())
+        .forEach(g => gameListDiv.appendChild(createGameButton(g)));
+    }
 
-    const img = document.createElement("img");
-    img.src = game.image || defaultImg;
-    Object.assign(img.style, {
-      width: "120px",
-      height: "100px",
-      objectFit: "cover",
-      borderRadius: "8px"
-    });
+    searchBar?.addEventListener("input", e => renderGames(e.target.value));
 
-    const label = document.createElement("div");
-    label.textContent = game.name;
-    Object.assign(label.style, {
-      marginTop: "5px",
-      fontWeight: "bold",
-      fontSize: "14px",
-      textAlign: "center"
-    });
-
-    btn.appendChild(img);
-    btn.appendChild(label);
-
-    // Open game in new tab
-    btn.onclick = () => {
-      window.open(game.url, "_blank");
+    // ── Category sidebar ──
+    const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Defense", "Reflex", "Annoying"];
+    const letters = {
+      "All Games": "🖳", Horror: "🕸", Puzzle: "𖡎", Racing: "🏎",
+      Action: "⚔", Sports: "⚽︎", Rpg: "🗡", Chill: "☕︎",
+      Timing: "⏱︎", Defense: "⛊", Reflex: "👁", Annoying: "☠︎︎",
     };
 
-    return btn;
-  }
+    categories.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.className = "category-button";
 
-  // ---------- RENDERING ----------
-  function renderGames(filter = "") {
-    gameListDiv.innerHTML = "";
-    games
-      .filter(g => g.name.toLowerCase().includes(filter.toLowerCase()))
-      .forEach(game => gameListDiv.appendChild(createGameButton(game)));
-  }
+      const abbr = document.createElement("span");
+      abbr.className = "category-abbr";
+      abbr.textContent = letters[cat];
 
-  function renderGamesByCategory(category) {
-    console.log("Filtering by category:", category);
-    gameListDiv.innerHTML = "";
-    games
-      .filter(g => g.category.toLowerCase() === category.toLowerCase())
-      .forEach(game => gameListDiv.appendChild(createGameButton(game)));
-  }
+      const text = document.createElement("span");
+      text.className = "category-text";
+      text.textContent = cat;
 
-  searchBar?.addEventListener("input", e => renderGames(e.target.value));
+      btn.appendChild(abbr);
+      btn.appendChild(text);
 
-  recommendedBtn?.addEventListener("click", () => {
-    const recommendedGames = ["Merger", "Shadow Boxing"]; // fixed names
-    gameListDiv.innerHTML = "";
-    games
-      .filter(g => recommendedGames.includes(g.name))
-      .forEach(game => gameListDiv.appendChild(createGameButton(g)));
+      btn.onclick = () => cat === "All Games" ? renderGames() : renderGamesByCategory(cat);
+      categorySidebar.appendChild(btn);
+    });
+
+    renderGames();
+
+    // ── Trailers ──
+    document.getElementById("trailer-btn")?.addEventListener("click", () => {
+      trailerPopup.innerHTML = "";
+      trailerPopup.appendChild(closeTrailerBtn);
+
+      newGameTrailers.forEach(game => {
+        const title = document.createElement("h3");
+        title.textContent = game.name;
+        Object.assign(title.style, { margin: "10px 0 6px", textAlign: "center" });
+
+        const video = document.createElement("video");
+        video.src      = game.trailer;
+        video.controls = true;
+        video.preload  = "metadata";
+        Object.assign(video.style, { width: "100%", maxHeight: "300px", marginBottom: "16px" });
+
+        trailerPopup.appendChild(title);
+        trailerPopup.appendChild(video);
+      });
+
+      trailerPopup.style.display = "block";
+    });
+
+    // ── Auth ──
+    signupBtn?.addEventListener("click", () => {
+      authTitle.textContent = "Sign Up";
+      authPopup.style.display = "flex";
+      authUsername.value = authPassword.value = authMessage.textContent = "";
+    });
+
+    loginBtn?.addEventListener("click", () => {
+      authTitle.textContent = "Log In";
+      authPopup.style.display = "flex";
+      authUsername.value = authPassword.value = authMessage.textContent = "";
+    });
+
+    closeAuthBtn?.addEventListener("click", () => { authPopup.style.display = "none"; });
+
+    authPassword.dataset.visible = "false";
+    authPassword.addEventListener("dblclick", () => {
+      const v = authPassword.dataset.visible === "true";
+      authPassword.dataset.visible = String(!v);
+      authPassword.type = v ? "password" : "text";
+    });
+
+    avatarInput?.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        avatarPreview.src = reader.result;
+        avatarPreview.style.display = "inline-block";
+        localStorage.setItem("userAvatar", reader.result);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    authSubmit?.addEventListener("click", () => {
+      const username = authUsername.value.trim();
+      const password = authPassword.value.trim();
+
+      if (username.length < 5) { authMessage.textContent = "❌ Username must be at least 5 characters"; return; }
+
+      if (authTitle.textContent === "Sign Up") {
+        if (users[username]) { authMessage.textContent = "❌ Username already taken"; return; }
+        users[username] = { password, isAdmin: adminUsers.includes(username) };
+        localStorage.setItem(usersKey, JSON.stringify(users));
+        localStorage.setItem("username", username);
+        if (localStorage.getItem("userAvatar"))
+          localStorage.setItem("avatar_" + username, localStorage.getItem("userAvatar"));
+        authPopup.style.display = "none";
+        updateUIAfterLogin(username);
+        return;
+      }
+
+      if (authTitle.textContent === "Log In") {
+        if (!users[username])                   { authMessage.textContent = "❌ Username does not exist"; return; }
+        if (users[username].password !== password) { authMessage.textContent = "❌ Wrong password"; return; }
+        localStorage.setItem("username", username);
+        authPopup.style.display = "none";
+        updateUIAfterLogin(username);
+      }
+    });
+
+    function updateUIAfterLogin(username) {
+      logoutBtn.style.display       = "inline-block";
+      usernameDisplay.style.display = "inline-block";
+      usernameDisplay.textContent   = username;
+      signupBtn.style.display = loginBtn.style.display = "none";
+
+      const savedAvatar = localStorage.getItem("userAvatar");
+      if (savedAvatar) { userAvatar.src = savedAvatar; userAvatar.style.display = "inline-block"; }
+      else { userAvatar.style.display = "none"; }
+
+      users = JSON.parse(localStorage.getItem(usersKey) || "{}");
+      adminPanel.style.display = users[username]?.isAdmin ? "block" : "none";
+    }
+
+    logoutBtn?.addEventListener("click", () => {
+      localStorage.removeItem("username");
+      usernameDisplay.style.display = userAvatar.style.display = "none";
+      logoutBtn.style.display = "none";
+      signupBtn.style.display = loginBtn.style.display = "inline-block";
+      adminPanel.style.display = "none";
+    });
+
+    // ── Global message ──
+    function triggerGlobalMessage(message) {
+      if (!globalMsgPopup) return;
+      globalMsgPopup.textContent = message;
+      globalMsgPopup.style.display = "block";
+      setTimeout(() => {
+        globalMsgPopup.style.opacity = "1";
+        globalMsgPopup.style.transform = "translateX(-50%) translateY(10px)";
+      }, 10);
+      setTimeout(() => {
+        globalMsgPopup.style.opacity = "0";
+        globalMsgPopup.style.transform = "translateX(-50%) translateY(-50px)";
+        setTimeout(() => { globalMsgPopup.style.display = "none"; }, 220);
+      }, 3000);
+    }
+
+    document.getElementById("global-message-send")?.addEventListener("click", () => {
+      const msg = prompt("Enter global message:");
+      if (msg) triggerGlobalMessage(msg);
+    });
+
+    document.getElementById("close-admin")?.addEventListener("click", () => {
+      adminPanel.style.display = "none";
+    });
+
+    const currentUser = localStorage.getItem("username");
+    if (currentUser) updateUIAfterLogin(currentUser);
   });
 
-  // ---------- CATEGORY SIDEBAR ----------
-  const categories = ["All Games", "Horror", "Puzzle", "Racing", "Action", "Rpg", "Sports", "Chill", "Timing", "Defense", "Reflex", "Annoying"];
+  // =====================================
+  // BACKGROUND CUSTOMIZATION
+  // =====================================
+  const bgColorPicker = document.getElementById("bg-color-picker");
+  const bgImageInput  = document.getElementById("bg-image-input");
+  const applyBgBtn    = document.getElementById("apply-bg");
+  const resetBgBtn    = document.getElementById("reset-bg");
 
-  const letters = {
-    "All Games": "🖳",
-    Horror: "🕸",
-    Puzzle: "𖡎",
-    Racing: "🏎",
-    Action: "⚔",
-    Sports: "⚽︎",
-    Rpg: "🗡",
-    Chill: "☕︎",
-    Timing: "⏱︎",
-    Defense: "⛊",
-    Reflex: "👁",
-    Annoying: "☠︎︎",
+  function applyBackground() {
+    const color  = bgColorPicker?.value;
+    const imgUrl = bgImageInput?.value.trim();
+    if (imgUrl) {
+      document.body.style.background = `url('${imgUrl}') center/cover no-repeat`;
+      localStorage.setItem("bgImage", imgUrl);
+      localStorage.removeItem("bgColor");
+    } else if (color) {
+      document.body.style.background = color;
+      localStorage.setItem("bgColor", color);
+      localStorage.removeItem("bgImage");
+    }
+  }
+
+  applyBgBtn?.addEventListener("click", applyBackground);
+  resetBgBtn?.addEventListener("click", () => {
+    localStorage.removeItem("bgColor");
+    localStorage.removeItem("bgImage");
+    document.body.style.background = "";
+    if (bgImageInput) bgImageInput.value = "";
+  });
+
+  (function loadBackground() {
+    const savedImage = localStorage.getItem("bgImage");
+    const savedColor = localStorage.getItem("bgColor");
+    if (savedImage)      document.body.style.background = `url('${savedImage}') center/cover no-repeat`;
+    else if (savedColor) document.body.style.background = savedColor;
+  })();
+
+  // =====================================
+  // INTRO ANIMATION
+  // =====================================
+  const introOverlay = document.createElement("div");
+  introOverlay.id = "intro-overlay";
+  introOverlay.textContent = "🕮 NoteShelf";
+  document.body.appendChild(introOverlay);
+
+  setTimeout(() => {
+    introOverlay.style.opacity = "0";
+    introOverlay.style.pointerEvents = "none";
+    setTimeout(() => introOverlay.remove(), 1000);
+  }, 1200);
+
+  // =====================================
+  // FIREBASE + CHAT
+  // =====================================
+  const firebaseConfig = {
+    apiKey:      "AIzaSyDPHnqalZ-wV4XPtZi95yT-2pHsZ7gN1dI",
+    authDomain:  "noteshelf-5cebe.firebaseapp.com",
+    databaseURL: "https://noteshelf-5cebe-default-rtdb.firebaseio.com/",
+    projectId:   "noteshelf-5cebe",
   };
 
-  categories.forEach(cat => {
-    const btn = document.createElement("button");
-    btn.textContent = `${letters[cat]} ${cat}`;
-    btn.className = "category-button";
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    btn.onclick = () => {
-      if (cat === "All Games") {
-        renderGames();
-      } else {
-        renderGamesByCategory(cat);
-      }
-    };
+  const chatToggle  = document.getElementById("chat-toggle");
+  const chatPanel   = document.getElementById("chat-panel");
+  const chatClose   = document.getElementById("chat-close");
+  const chatMessages= document.getElementById("chat-messages");
+  const chatInput   = document.getElementById("chat-input");
+  const chatSend    = document.getElementById("chat-send");
+  const typingRef   = db.ref("typing");
+  const typingIndicator = document.getElementById("typing-indicator");
 
-    categorySidebar.appendChild(btn);
-  });
+  chatToggle.onclick = () => { chatPanel.style.display = "flex"; }
+  chatClose.onclick  = () => { chatPanel.style.display = "none"; }
 
-  renderGames();
+  // ── Bad word filter ──
+  const badWords = ["nigger","nigga","fuck","shit","niga","sex","bitch"];
+  function filterMessage(msg) {
+    let clean = msg;
+    badWords.forEach(w => { clean = clean.replace(new RegExp(w, "gi"), "****"); });
+    return clean;
+  }
 
-  // =====================================
-  // GAME TRAILERS BUTTON
-  // =====================================
-  document.getElementById("trailer-btn")?.addEventListener("click", () => {
-    console.log("Trailer button clicked");
-    trailerPopup.innerHTML = "";
-    trailerPopup.appendChild(closeTrailerBtn);
-
-    newGameTrailers.forEach(game => {
-      const title = document.createElement("h3");
-      title.textContent = game.name;
-      Object.assign(title.style, {
-        margin: "10px 0 5px 0",
-        fontSize: "18px",
-        textAlign: "center",
-        fontWeight: "bold"
-      });
-
-      const video = document.createElement("video");
-      video.src = game.trailer;
-      video.controls = true;
-      video.autoplay = false;
-      Object.assign(video.style, {
-        width: "100%",
-        maxHeight: "300px",
-        borderRadius: "8px",
-        marginBottom: "15px"
-      });
-      video.preload = "metadata";
-
-      trailerPopup.appendChild(title);
-      trailerPopup.appendChild(video);
+  // ── Send ──
+  function sendMessage() {
+    const user = localStorage.getItem("username") || "Guest";
+    let msg = chatInput.value.trim();
+    if (!msg) return;
+    msg = filterMessage(msg);
+    db.ref("messages").push({
+      user,
+      text: msg,
+      avatar: localStorage.getItem("avatar_" + user) || "",
+      time: Date.now()
     });
+    chatInput.value = "";
+    typingRef.child(user).remove();
+  }
 
-    trailerPopup.style.display = "block";
-  });
+  chatSend.onclick = sendMessage;
+  chatInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
 
-  // =====================================
-  // AUTH & AVATAR
-  // =====================================
-  signupBtn?.addEventListener("click", () => {
-    console.log("Sign Up clicked");
-    authTitle.textContent = "Sign Up";
-    authPopup.style.display = "flex";
-    authUsername.value = "";
-    authPassword.value = "";
-    authMessage.textContent = "";
-  });
-
-  loginBtn?.addEventListener("click", () => {
-    console.log("Log In clicked");
-    authTitle.textContent = "Log In";
-    authPopup.style.display = "flex";
-    authUsername.value = "";
-    authPassword.value = "";
-    authMessage.textContent = "";
-  });
-
-  const username = authUsername.value.trim();
-const avatar = localStorage.getItem("userAvatar") || defaultImg;
-
-// Save avatar for this username
-localStorage.setItem("avatar_" + username, avatar);
-
-  closeAuthBtn?.addEventListener("click", () => {
-    console.log("Auth close clicked");
-    authPopup.style.display = "none";
-  });
-
-  authPassword.dataset.visible = "false";
-  authPassword.addEventListener("dblclick", () => {
-    authPassword.dataset.visible = authPassword.dataset.visible === "true" ? "false" : "true";
-    authPassword.type = authPassword.dataset.visible === "true" ? "text" : "password";
-  });
-
-  avatarInput?.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      avatarPreview.src = reader.result;
-      avatarPreview.style.display = "inline-block";
-      localStorage.setItem("userAvatar", reader.result);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  authSubmit?.addEventListener("click", () => {
-    const username = authUsername.value.trim();
-    const password = authPassword.value.trim();
-
-    if (username.length < 5) {
-      authMessage.textContent = "❌ Username must be at least 5 characters";
-      return;
-    }
-
-    // Sign Up
-    if (authTitle.textContent === "Sign Up") {
-      if (users[username]) {
-        authMessage.textContent = "❌ Username already taken";
-        return;
-      }
-      users[username] = { password, isAdmin: adminUsers.includes(username) };
-      localStorage.setItem(usersKey, JSON.stringify(users));
-      localStorage.setItem("username", username);
-      authPopup.style.display = "none";
-      updateUIAfterLogin(username);
-      return;
-    }
-
-    // Log In
-    if (authTitle.textContent === "Log In") {
-      if (!users[username]) {
-        authMessage.textContent = "❌ Username does not exist";
-        return;
-      }
-      if (users[username].password !== password) {
-        authMessage.textContent = "❌ Wrong password";
-        return;
-      }
-      localStorage.setItem("username", username);
-      authPopup.style.display = "none";
-      updateUIAfterLogin(username);
-    }
-  });
-
-  function updateUIAfterLogin(username) {
-    logoutBtn.style.display = "inline-block";
-    usernameDisplay.style.display = "inline-block";
-    usernameDisplay.textContent = username;
-
-    signupBtn.style.display = "none";
-    loginBtn.style.display = "none";
-
-    const savedAvatar = localStorage.getItem("userAvatar");
-    if (savedAvatar) {
-      userAvatar.src = savedAvatar;
-      userAvatar.style.display = "inline-block";
+  // ── Typing indicator ──
+  chatInput.addEventListener("input", () => {
+    const user = localStorage.getItem("username") || "Guest";
+    if (chatInput.value.trim()) {
+      typingRef.child(user).set(true);
+      clearTimeout(chatInput._typingTimer);
+      chatInput._typingTimer = setTimeout(() => typingRef.child(user).remove(), 2000);
     } else {
-      userAvatar.style.display = "none";
-    }
-
-    users = JSON.parse(localStorage.getItem(usersKey) || "{}");
-    adminPanel.style.display = users[username]?.isAdmin ? "block" : "none";
-  }
-
-  logoutBtn?.addEventListener("click", () => {
-    console.log("Log Out clicked");
-    localStorage.removeItem("username");
-    usernameDisplay.style.display = "none";
-    userAvatar.style.display = "none";
-    logoutBtn.style.display = "none";
-
-    signupBtn.style.display = "inline-block";
-    loginBtn.style.display = "inline-block";
-    adminPanel.style.display = "none";
-  });
-
-  // =====================================
-  // GLOBAL MESSAGE (SUPABASE DISABLED VERSION)
-  // =====================================
-  function triggerGlobalMessage(message) {
-    if (!globalMsgPopup) return;
-    globalMsgPopup.textContent = message;
-    globalMsgPopup.style.display = "block";
-    setTimeout(() => {
-      globalMsgPopup.style.opacity = "1";
-      globalMsgPopup.style.transform = "translateX(-50%) translateY(10px)";
-    }, 10);
-    setTimeout(() => {
-      globalMsgPopup.style.opacity = "0";
-      globalMsgPopup.style.transform = "translateX(-50%) translateY(-50px)";
-      setTimeout(() => {
-        globalMsgPopup.style.display = "none";
-      }, 200);
-    }, 3000);
-  }
-
-  // For CodePen, just show local message
-  document.getElementById("global-message-send")?.addEventListener("click", () => {
-    const msg = prompt("Enter global message:");
-    if (msg) {
-      triggerGlobalMessage(msg);
-      // If using Supabase, you would call emitGlobalMessage(msg) here.
+      typingRef.child(user).remove();
     }
   });
 
-  const currentUser = localStorage.getItem("username");
-  if (currentUser) updateUIAfterLogin(currentUser);
-});
-
-// =====================================
-// UPDATE DATA LOOP (DEBUG)
-// =====================================
-function updateData() {
-  console.log("update tick", new Date().toISOString());
-}
-setInterval(updateData, 1000);
-
-// =====================================
-// BACKGROUND CUSTOMIZATION
-// =====================================
-const bgColorPicker = document.getElementById("bg-color-picker");
-const bgImageInput  = document.getElementById("bg-image-input");
-const applyBgBtn    = document.getElementById("apply-bg");
-const resetBgBtn    = document.getElementById("reset-bg");
-
-function applyBackground() {
-  const color  = bgColorPicker?.value;
-  const imgUrl = bgImageInput?.value.trim();
-  if (imgUrl) {
-    document.body.style.background = `url('${imgUrl}') center/cover no-repeat`;
-    localStorage.setItem("bgImage", imgUrl);
-    localStorage.removeItem("bgColor");
-  } else if (color) {
-    document.body.style.background = color;
-    localStorage.setItem("bgColor", color);
-    localStorage.removeItem("bgImage");
-  }
-}
-
-applyBgBtn?.addEventListener("click", applyBackground);
-resetBgBtn?.addEventListener("click", () => {
-  localStorage.removeItem("bgColor");
-  localStorage.removeItem("bgImage");
-  document.body.style.background = "#100";
-  if (bgImageInput) bgImageInput.value = "";
-});
-
-(function loadBackground() {
-  const savedColor = localStorage.getItem("bgColor");
-  const savedImage = localStorage.getItem("bgImage");
-  if (savedImage) {
-    document.body.style.background = `url('${savedImage}') center/cover no-repeat`;
-    if (bgImageInput) bgImageInput.value = savedImage;
-  } else if (savedColor) {
-    document.body.style.background = savedColor;
-    if (bgColorPicker) bgColorPicker.value = savedColor;
-  }
-})();
-
-// =====================================
-// INTRO ANIMATION
-// =====================================
-const introOverlay = document.createElement("div");
-introOverlay.id = "intro-overlay";
-introOverlay.textContent = "🕮 NoteShelf";
-document.body.appendChild(introOverlay);
-
-setTimeout(() => {
-  introOverlay.style.opacity = "0";
-  introOverlay.style.pointerEvents = "none"; // don’t block clicks
-  setTimeout(() => {
-    introOverlay.remove();
-  }, 1000);
-
-}, 1000);
-
-// 🔥 REPLACE WITH YOUR CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyDPHnqalZ-wV4XPtZi95yT-2pHsZ7gN1dI",
-  authDomain: "noteshelf-5cebe.firebaseapp.com",
-  databaseURL: "https://noteshelf-5cebe-default-rtdb.firebaseio.com/",
-  projectId: "noteshelf-5cebe",
-};
-
-// Init Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const chatToggle = document.getElementById("chat-toggle");
-const chatPanel = document.getElementById("chat-panel");
-const chatClose = document.getElementById("chat-close");
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const chatSend = document.getElementById("chat-send");
-const typingRef = db.ref("typing");
-
-db.ref("messages").limitToLast(50).on("child_added", snap => {
-  const data = snap.val();
-  const user = localStorage.getItem("username") || "Guest";
-
-  const row = document.createElement("div");
-  row.classList.add("chat-row");
-
-  const isMe = data.user === user;
-  row.classList.add(isMe ? "me" : "other");
-
-  // Avatar
-  const avatar = document.createElement("div");
-  avatar.className = "chat-avatar";
-
-  // optional: use stored avatar
-  const avatarUrl = localStorage.getItem("avatar_" + data.user);
-  if (avatarUrl) {
-    avatar.style.backgroundImage = `url(${avatarUrl})`;
-    avatar.style.backgroundSize = "cover";
-  }
-
-  // Bubble
-  const bubble = document.createElement("div");
-  bubble.className = "chat-bubble";
-  bubble.innerHTML = `
-    <div class="chat-name">${data.user}</div>
-    <div>${data.text}</div>
-  `;
-
-  // Append order
-  if (isMe) {
-    row.appendChild(bubble);
-    row.appendChild(avatar);
-  } else {
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-  }
-
-  chatMessages.appendChild(row);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-});
-// Toggle
-chatToggle.onclick = () => chatPanel.style.display = "flex";
-chatClose.onclick = () => chatPanel.style.display = "none";
-
-// 🚫 Simple filter
-const badWords = ["nigger", "nigga", "fuck", "shit", "niga", "sex", "bitch"];
-
-function filterMessage(msg) {
-  let clean = msg;
-  badWords.forEach(word => {
-    const regex = new RegExp(word, "gi");
-    clean = clean.replace(regex, "****");
-  });
-  return clean;
-}
-
-// Send message
-chatSend.onclick = sendMessage;
-chatInput.addEventListener("keypress", e => {
-  if (e.key === "Enter") sendMessage();
-});
-
-function sendMessage() {
-  const user = localStorage.getItem("username") || "Guest"; // define user here
-  let msg = chatInput.value.trim();
-  if (!msg) return;
-
-  msg = filterMessage(msg);
-
-  const newMsgRef = db.ref("messages").push();
-  newMsgRef.set({
-    user, // ✅ defined here
-    text: msg,
-    avatar: localStorage.getItem("avatar_" + user) || "",
-    time: Date.now()
+  typingRef.on("value", snap => {
+    const data = snap.val();
+    const me   = localStorage.getItem("username") || "Guest";
+    if (!data) { typingIndicator.textContent = ""; return; }
+    const others = Object.keys(data).filter(u => u !== me);
+    typingIndicator.textContent = others.length ? `${others.join(", ")} typing…` : "";
   });
 
-  chatInput.value = "";
-}
-
-
-db.ref("messages").limitToLast(50).on("child_added", snap => {
-  const data = snap.val();
-  const msgKey = snap.key; // Firebase key
-  const currentUser = localStorage.getItem("username") || "Guest";
-
-  const row = document.createElement("div");
-  row.classList.add("chat-row");
-
-  const isMe = data.user === currentUser;
-  row.classList.add(isMe ? "me" : "other");
-
-  // Avatar
-  const avatar = document.createElement("div");
-  avatar.className = "chat-avatar";
-  if (data.avatar) {
-    avatar.style.backgroundImage = `url(${data.avatar})`;
-    avatar.style.backgroundSize = "cover";
+  // ── Message helpers ──
+  function editMessage(msgKey, textEl) {
+    const newText = prompt("Edit message:", textEl.textContent);
+    if (newText && newText.trim()) {
+      db.ref("messages/" + msgKey).update({ text: filterMessage(newText.trim()) });
+      textEl.textContent = filterMessage(newText.trim());
+    }
   }
 
-  // Bubble
-  const bubble = document.createElement("div");
-  bubble.className = "chat-bubble";
-  bubble.innerHTML = `
-    <div class="chat-name">${data.user}</div>
-    <div class="chat-text">${data.text}</div>
-  `;
-
-  // Edit & Delete buttons (only for self)
-  if (data.user === currentUser) {
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "✎";
-    editBtn.className = "chat-edit-btn";
-    editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "🗑";
-    delBtn.className = "chat-delete-btn";
-    delBtn.onclick = () => deleteMessage(msgKey, row);
-
-    bubble.appendChild(editBtn);
-    bubble.appendChild(delBtn);
+  function deleteMessage(msgKey, rowEl) {
+    if (confirm("Delete this message?")) {
+      db.ref("messages/" + msgKey).remove();
+      rowEl.remove();
+    }
   }
 
-  // Append in proper order
-  if (isMe) {
-    row.appendChild(bubble);
-    row.appendChild(avatar);
-  } else {
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-  }
+  // ── Render messages ──
+  const seenKeys = new Set();
 
-  chatMessages.appendChild(row);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}); // ✅ Correct closing
-// Listen to others typing
-typingRef.on("value", snap => {
-  const data = snap.val();
-  if (!data) {
-    typingIndicator.textContent = "";
-    return;
-  }
+  db.ref("messages").limitToLast(50).on("child_added", snap => {
+    if (seenKeys.has(snap.key)) return;
+    seenKeys.add(snap.key);
 
-  const usersTyping = Object.keys(data).filter(u => u !== username);
+    const data        = snap.val();
+    const msgKey      = snap.key;
+    const currentUser = localStorage.getItem("username") || "Guest";
+    const isMe        = data.user === currentUser;
 
-  if (usersTyping.length > 0) {
-    typingIndicator.textContent = usersTyping.join(", ") + " typing...";
-  } else {
-    typingIndicator.textContent = "";
-  }
-});
+    const row = document.createElement("div");
+    row.classList.add("chat-row", isMe ? "me" : "other");
+
+    const avatar = document.createElement("div");
+    avatar.className = "chat-avatar";
+    if (data.avatar) {
+      avatar.style.backgroundImage = `url(${data.avatar})`;
+      avatar.style.backgroundSize  = "cover";
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+    bubble.innerHTML = `
+      <div class="chat-name">${data.user}</div>
+      <div class="chat-text">${data.text}</div>
+    `;
+
+    if (isMe) {
+      const btns = document.createElement("div");
+      btns.className = "chat-btns";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "✎";
+      editBtn.onclick = () => editMessage(msgKey, bubble.querySelector(".chat-text"));
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "🗑";
+      delBtn.onclick = () => deleteMessage(msgKey, row);
+
+      btns.appendChild(editBtn);
+      btns.appendChild(delBtn);
+      bubble.appendChild(btns);
+    }
+
+    if (isMe) { row.appendChild(bubble); row.appendChild(avatar); }
+    else       { row.appendChild(avatar); row.appendChild(bubble); }
+
+    chatMessages.appendChild(row);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  });
