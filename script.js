@@ -68,7 +68,7 @@ window.addEventListener("keydown", e => {
 });
 
 const newGameTrailers = [
-  { name: "HexAsteal",       trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/WhatsApp%20Video%202026-03-29%20at%2017.43.30.mp4" },
+  { name: "HexAsteal",        trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/WhatsApp%20Video%202026-03-29%20at%2017.43.30.mp4" },
   { name: "8-Ball Billiards", trailer: "https://raw.githubusercontent.com/r2ftzu1ha2vy-glitch/Trailers/main/8-Ball%20Billiards%20(1).mp4" },
 ];
 
@@ -182,7 +182,6 @@ document.addEventListener("DOMContentLoaded", () => {
     categorySidebar.appendChild(btn);
   });
 
-  // Set "All Games" as default active
   categorySidebar.firstChild?.classList.add("active");
   activeBtn = categorySidebar.firstChild;
   renderGames();
@@ -247,7 +246,6 @@ document.addEventListener("DOMContentLoaded", () => {
       users[username] = { password, isAdmin: adminUsers.includes(username), avatar: avatarData };
       localStorage.setItem(usersKey, JSON.stringify(users));
       localStorage.setItem("username", username);
-      // Store avatar keyed to username so chat can fetch it
       if (avatarData) localStorage.setItem("avatar_" + username, avatarData);
       authPopup.style.display = "none";
       updateUIAfterLogin(username);
@@ -258,7 +256,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!users[username])                      { authMessage.textContent = "❌ Username does not exist"; return; }
       if (users[username].password !== password)  { authMessage.textContent = "❌ Wrong password"; return; }
       localStorage.setItem("username", username);
-      // Restore avatar from user record into avatar_ key for chat
       if (users[username].avatar) localStorage.setItem("avatar_" + username, users[username].avatar);
       authPopup.style.display = "none";
       updateUIAfterLogin(username);
@@ -276,7 +273,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (savedAvatar) {
       userAvatar.src = savedAvatar;
       userAvatar.style.display = "inline-block";
-      // Make sure avatar_ key is always current
       localStorage.setItem("avatar_" + username, savedAvatar);
     } else {
       userAvatar.style.display = "none";
@@ -365,7 +361,6 @@ chatInput.addEventListener("input", () => {
   chatCharCount.textContent = remaining;
   chatCharCount.style.color = remaining < 30 ? "#ff6b6b" : "";
 
-  // Typing indicator in Firebase
   const user = localStorage.getItem("username") || "Guest";
   if (chatInput.value.trim()) {
     typingRef.child(user).set(true);
@@ -391,7 +386,7 @@ typingRef.on("value", snap => {
   }
 });
 
-// ── Presence: track online users ──
+// ── Presence ──
 const currentUser = () => localStorage.getItem("username") || "Guest";
 
 function goOnline() {
@@ -428,23 +423,17 @@ function formatDate(ts) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-// ── Get initials for avatar fallback ──
 function getInitials(name) {
   return name ? name.charAt(0).toUpperCase() : "?";
 }
 
-// ── Build avatar element ──
 function buildAvatar(username, avatarUrl) {
   const el = document.createElement("div");
   el.className = "chat-avatar";
   if (avatarUrl) {
-    // Try using an img tag — works for both base64 and URL
     const img = document.createElement("img");
     img.src = avatarUrl;
-    img.onerror = () => {
-      el.removeChild(img);
-      el.textContent = getInitials(username);
-    };
+    img.onerror = () => { el.removeChild(img); el.textContent = getInitials(username); };
     el.appendChild(img);
   } else {
     el.textContent = getInitials(username);
@@ -475,7 +464,6 @@ function sendMessage() {
   if (!msg) return;
   msg = filterMessage(msg);
 
-  // Get avatar: prioritise localStorage key for this username
   const avatar = localStorage.getItem("avatar_" + user) || "";
 
   db.ref("messages").push({
@@ -505,7 +493,6 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   const me           = currentUser();
   const isMe         = data.user === me;
 
-  // ── Day divider ──
   const msgDate = formatDate(data.time);
   if (msgDate !== lastDate) {
     lastDate = msgDate;
@@ -515,20 +502,15 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     chatMessages.appendChild(divider);
   }
 
-  // ── Row ──
   const row = document.createElement("div");
   row.classList.add("chat-row", isMe ? "me" : "other");
 
-  // ── Avatar: use stored avatar keyed by username ──
-  // Prefer data.avatar (stored at send time), fallback to localStorage lookup
   const avatarSrc = data.avatar || localStorage.getItem("avatar_" + data.user) || "";
   const avatar    = buildAvatar(data.user, avatarSrc);
 
-  // ── Bubble group ──
   const group = document.createElement("div");
   group.className = "chat-bubble-group";
 
-  // Sender name (only for others)
   if (!isMe) {
     const sender = document.createElement("div");
     sender.className = "chat-sender";
@@ -536,7 +518,6 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     group.appendChild(sender);
   }
 
-  // Bubble
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
 
@@ -545,7 +526,6 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   textEl.textContent = data.text;
   bubble.appendChild(textEl);
 
-  // Edit / Delete actions (own messages only)
   if (isMe) {
     const actions = document.createElement("div");
     actions.className = "chat-actions";
@@ -569,13 +549,11 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 
   group.appendChild(bubble);
 
-  // Timestamp
   const timeEl = document.createElement("div");
   timeEl.className = "chat-time";
   timeEl.textContent = formatTime(data.time);
   group.appendChild(timeEl);
 
-  // Assemble
   if (isMe) {
     row.appendChild(group);
     row.appendChild(avatar);
@@ -586,14 +564,422 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 
   chatMessages.appendChild(row);
 
-  // Unread badge when panel is closed
   if (!isPanelOpen) {
     unreadCount++;
     chatBadge.textContent = unreadCount > 9 ? "9+" : unreadCount;
     chatBadge.style.display = "flex";
   }
 
-  // Auto-scroll only if near bottom
   const nearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 80;
   if (nearBottom || isMe) chatMessages.scrollTop = chatMessages.scrollHeight;
 });
+
+// =====================================
+// DIRECT MESSAGES SYSTEM
+// =====================================
+
+(function initDMSystem() {
+
+  const dmBtnFloat    = document.getElementById("dm-btn-float");
+  const dmPanel       = document.getElementById("dm-panel");
+  const dmUnreadBadge = document.getElementById("dm-unread-badge");
+  const dmAddInput    = document.getElementById("dm-add-input");
+  const dmAddBtn      = document.getElementById("dm-add-btn");
+  const dmFriendsList = document.getElementById("dm-friends-list");
+  const dmNoConvo     = document.getElementById("dm-no-convo");
+  const dmConvo       = document.getElementById("dm-convo");
+  const dmChatWith    = document.getElementById("dm-chat-with");
+  const dmMessages    = document.getElementById("dm-messages");
+  const dmTypingEl    = document.getElementById("dm-typing");
+  const dmInput       = document.getElementById("dm-input");
+  const dmSend        = document.getElementById("dm-send");
+  const dmCloseConvo  = document.getElementById("dm-close-convo");
+  const dmToast       = document.getElementById("dm-toast");
+
+  let isDMOpen         = false;
+  let activeFriend     = null;
+  let activeConvoId    = null;
+  let dmUnreadTotal    = 0;
+  let dmUnreadByUser   = {};
+  let activeListener   = null;
+  let activeListenerRef = null;
+  let dmTypingTimer    = null;
+
+  // ── Helpers ──
+  function me() { return localStorage.getItem("username") || null; }
+
+  function convoId(a, b) { return [a, b].sort().join("__"); }
+
+  function getUsers() { return JSON.parse(localStorage.getItem("users") || "{}"); }
+
+  function getFriends() {
+    const user = me();
+    if (!user) return [];
+    return JSON.parse(localStorage.getItem("friends_" + user) || "[]");
+  }
+
+  function saveFriends(list) {
+    const user = me();
+    if (!user) return;
+    localStorage.setItem("friends_" + user, JSON.stringify(list));
+  }
+
+  function getAvatarFor(username) {
+    return localStorage.getItem("avatar_" + username) || "";
+  }
+
+  function showToast(msg) {
+    dmToast.textContent = msg;
+    dmToast.classList.add("show");
+    setTimeout(() => dmToast.classList.remove("show"), 2600);
+  }
+
+  function buildAvatarEl(username, size) {
+    size = size || 32;
+    const el = document.createElement("div");
+    el.className = "dm-friend-avatar";
+    el.style.width = size + "px";
+    el.style.height = size + "px";
+    const av = getAvatarFor(username);
+    if (av) {
+      const img = document.createElement("img");
+      img.src = av;
+      img.onerror = () => { el.removeChild(img); el.textContent = getInitials(username); };
+      el.appendChild(img);
+    } else {
+      el.textContent = getInitials(username);
+    }
+    return el;
+  }
+
+  function formatTimeShort(ts) {
+    return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function refreshUnreadBadge() {
+    dmUnreadTotal = Object.values(dmUnreadByUser).reduce((a, b) => a + b, 0);
+    if (dmUnreadTotal > 0) {
+      dmUnreadBadge.textContent = dmUnreadTotal > 9 ? "9+" : dmUnreadTotal;
+      dmUnreadBadge.style.display = "flex";
+    } else {
+      dmUnreadBadge.style.display = "none";
+    }
+  }
+
+  // ── Open / Close panel ──
+  dmBtnFloat.onclick = (e) => {
+    e.stopPropagation();
+    isDMOpen = !isDMOpen;
+    dmPanel.style.display = isDMOpen ? "flex" : "none";
+    if (isDMOpen && activeFriend) {
+      dmUnreadByUser[activeFriend] = 0;
+      refreshUnreadBadge();
+      renderFriendsList();
+    }
+  };
+
+  document.addEventListener("click", e => {
+    if (isDMOpen && !dmPanel.contains(e.target) && e.target !== dmBtnFloat && !dmBtnFloat.contains(e.target)) {
+      isDMOpen = false;
+      dmPanel.style.display = "none";
+    }
+  });
+
+  // ── Add friend ──
+  function addFriend() {
+    const user = me();
+    if (!user) { showToast("⚠ Log in first"); return; }
+    const target = dmAddInput.value.trim();
+    if (!target) return;
+    if (target === user) { showToast("⚠ That's you!"); dmAddInput.value = ""; return; }
+
+    const users = getUsers();
+    if (!users[target]) { showToast("✗ User not found"); return; }
+
+    const friends = getFriends();
+    if (friends.includes(target)) { showToast("Already friends"); dmAddInput.value = ""; return; }
+
+    friends.push(target);
+    saveFriends(friends);
+    dmAddInput.value = "";
+    showToast("✓ Added " + target);
+    renderFriendsList();
+    watchFriendDMs(target);
+  }
+
+  dmAddBtn.onclick = addFriend;
+  dmAddInput.addEventListener("keydown", e => { if (e.key === "Enter") addFriend(); });
+
+  // ── Remove friend ──
+  function removeFriend(target) {
+    const friends = getFriends().filter(f => f !== target);
+    saveFriends(friends);
+    if (activeFriend === target) closeConversation();
+    delete dmUnreadByUser[target];
+    refreshUnreadBadge();
+    renderFriendsList();
+    showToast("Removed " + target);
+  }
+
+  // ── Render friends list ──
+  function renderFriendsList() {
+    const friends = getFriends();
+    dmFriendsList.innerHTML = "";
+
+    if (!me()) {
+      const empty = document.createElement("div");
+      empty.className = "dm-empty";
+      empty.textContent = "Log in to use Direct Messages.";
+      dmFriendsList.appendChild(empty);
+      return;
+    }
+
+    if (friends.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "dm-empty";
+      empty.textContent = "Add a friend to start chatting privately.";
+      dmFriendsList.appendChild(empty);
+      return;
+    }
+
+    friends.forEach(friend => {
+      const row = document.createElement("div");
+      row.className = "dm-friend-row" + (friend === activeFriend ? " active" : "");
+
+      const avatar = buildAvatarEl(friend, 32);
+      const info = document.createElement("div");
+      info.className = "dm-friend-info";
+
+      const name = document.createElement("div");
+      name.className = "dm-friend-name";
+      name.textContent = friend;
+
+      const preview = document.createElement("div");
+      preview.className = "dm-friend-preview";
+      preview.textContent = localStorage.getItem("dm_preview_" + convoId(me(), friend)) || "No messages yet";
+
+      info.appendChild(name);
+      info.appendChild(preview);
+
+      row.appendChild(avatar);
+      row.appendChild(info);
+
+      const unread = dmUnreadByUser[friend] || 0;
+      if (unread > 0) {
+        const badge = document.createElement("div");
+        badge.className = "dm-friend-badge";
+        badge.textContent = unread > 9 ? "9+" : unread;
+        row.appendChild(badge);
+      }
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "dm-remove-btn";
+      removeBtn.title = "Remove friend";
+      removeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+      removeBtn.onclick = e => { e.stopPropagation(); removeFriend(friend); };
+      row.appendChild(removeBtn);
+
+      row.onclick = () => openConversation(friend);
+      dmFriendsList.appendChild(row);
+    });
+  }
+
+  // ── Open a conversation ──
+  function openConversation(friend) {
+    activeFriend  = friend;
+    activeConvoId = convoId(me(), friend);
+
+    if (activeListenerRef && activeListener) {
+      activeListenerRef.off("child_added", activeListener);
+    }
+
+    dmUnreadByUser[friend] = 0;
+    refreshUnreadBadge();
+
+    dmNoConvo.style.display  = "none";
+    dmConvo.style.display    = "flex";
+    dmChatWith.textContent   = friend;
+    dmMessages.innerHTML     = "";
+
+    renderFriendsList();
+
+    const messagesRef = db.ref("dms/" + activeConvoId + "/messages");
+    activeListenerRef = messagesRef;
+    activeListener = messagesRef.limitToLast(50).on("child_added", snap => {
+      const data = snap.val();
+      appendDMMessage(data, snap.key);
+      localStorage.setItem("dm_preview_" + activeConvoId, data.text.substring(0, 32) + (data.text.length > 32 ? "…" : ""));
+      renderFriendsList();
+      dmMessages.scrollTop = dmMessages.scrollHeight;
+    });
+
+    db.ref("dm_typing/" + activeConvoId + "/" + friend).on("value", snap => {
+      if (snap.val()) {
+        dmTypingEl.innerHTML = `<span>${friend} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
+      } else {
+        dmTypingEl.innerHTML = "";
+      }
+    });
+
+    dmInput.focus();
+  }
+
+  function closeConversation() {
+    if (activeListenerRef && activeListener) {
+      activeListenerRef.off("child_added", activeListener);
+    }
+    activeFriend   = null;
+    activeConvoId  = null;
+    dmNoConvo.style.display = "flex";
+    dmConvo.style.display   = "none";
+    renderFriendsList();
+  }
+
+  dmCloseConvo.onclick = closeConversation;
+
+  // ── Append a DM message bubble ──
+  function appendDMMessage(data, key) {
+    const user = me();
+    const isMe = data.sender === user;
+
+    const row = document.createElement("div");
+    row.classList.add("chat-row", isMe ? "me" : "other");
+
+    const avatar = buildAvatarEl(data.sender, 28);
+
+    const group = document.createElement("div");
+    group.className = "chat-bubble-group";
+
+    if (!isMe) {
+      const sender = document.createElement("div");
+      sender.className = "chat-sender";
+      sender.textContent = data.sender;
+      group.appendChild(sender);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+
+    const textEl = document.createElement("div");
+    textEl.className = "chat-text";
+    textEl.textContent = data.text;
+    bubble.appendChild(textEl);
+
+    if (isMe) {
+      const actions = document.createElement("div");
+      actions.className = "chat-actions";
+      const delBtn = document.createElement("button");
+      delBtn.className = "chat-action-btn del";
+      delBtn.title = "Delete";
+      delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+      delBtn.onclick = () => {
+        if (confirm("Delete this message?")) {
+          db.ref("dms/" + activeConvoId + "/messages/" + key).remove();
+          row.remove();
+        }
+      };
+      actions.appendChild(delBtn);
+      bubble.appendChild(actions);
+    }
+
+    group.appendChild(bubble);
+
+    const timeEl = document.createElement("div");
+    timeEl.className = "chat-time";
+    timeEl.textContent = formatTimeShort(data.time);
+    group.appendChild(timeEl);
+
+    if (isMe) { row.appendChild(group); row.appendChild(avatar); }
+    else       { row.appendChild(avatar); row.appendChild(group); }
+
+    dmMessages.appendChild(row);
+  }
+
+  // ── Send DM ──
+  function sendDM() {
+    const user = me();
+    if (!user) { showToast("⚠ Log in to send messages"); return; }
+    if (!activeFriend || !activeConvoId) return;
+    const text = dmInput.value.trim();
+    if (!text) return;
+
+    const clean = filterMessage(text);
+
+    db.ref("dms/" + activeConvoId + "/messages").push({
+      sender: user,
+      text: clean,
+      time: Date.now(),
+    });
+
+    db.ref("dm_typing/" + activeConvoId + "/" + user).remove();
+    clearTimeout(dmTypingTimer);
+    dmInput.value = "";
+  }
+
+  dmSend.onclick = sendDM;
+  dmInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDM(); }
+  });
+
+  // ── Typing indicator ──
+  dmInput.addEventListener("input", () => {
+    if (!activeConvoId) return;
+    const user = me();
+    if (!user) return;
+    if (dmInput.value.trim()) {
+      db.ref("dm_typing/" + activeConvoId + "/" + user).set(true);
+      clearTimeout(dmTypingTimer);
+      dmTypingTimer = setTimeout(() => db.ref("dm_typing/" + activeConvoId + "/" + user).remove(), 2200);
+    } else {
+      db.ref("dm_typing/" + activeConvoId + "/" + user).remove();
+    }
+  });
+
+  // ── Watch a single friend's DMs for incoming unread count ──
+  function watchFriendDMs(friend) {
+    const user = me();
+    if (!user) return;
+    const cid = convoId(user, friend);
+    db.ref("dms/" + cid + "/messages")
+      .orderByChild("time")
+      .startAt(Date.now())
+      .on("child_added", snap => {
+        const data = snap.val();
+        if (data.sender === friend) {
+          if (!isDMOpen || activeFriend !== friend) {
+            dmUnreadByUser[friend] = (dmUnreadByUser[friend] || 0) + 1;
+            refreshUnreadBadge();
+            renderFriendsList();
+          }
+        }
+      });
+  }
+
+  // ── Init: watch all existing friends ──
+  function initWatchers() {
+    const user = me();
+    if (!user) return;
+    getFriends().forEach(friend => watchFriendDMs(friend));
+  }
+
+  // ── Poll for login state changes ──
+  let _lastUser = me();
+  setInterval(() => {
+    const current = me();
+    if (current !== _lastUser) {
+      _lastUser = current;
+      if (current) {
+        renderFriendsList();
+        initWatchers();
+      } else {
+        closeConversation();
+        renderFriendsList();
+      }
+    }
+  }, 800);
+
+  // Initial render
+  renderFriendsList();
+  initWatchers();
+
+})();
