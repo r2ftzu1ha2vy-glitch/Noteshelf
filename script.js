@@ -1181,9 +1181,29 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     const contentEl = buildMessageContent(data.text);
     bubble.appendChild(contentEl);
 
-    if (isMe) {
+if (isMe) {
       const actions  = document.createElement("div");
       actions.className = "chat-actions";
+
+      const editBtn    = document.createElement("button");
+      editBtn.className = "chat-action-btn";
+      editBtn.title     = "Edit";
+      editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      editBtn.onclick   = () => {
+        const currentText = bubble.querySelector(".chat-text")
+          ? bubble.querySelector(".chat-text").textContent
+          : bubble.querySelector("img")
+            ? bubble.querySelector("img").src
+            : "";
+        const newText = prompt("Edit message:", currentText);
+        if (newText && newText.trim()) {
+          const filtered = filterMessage(newText.trim());
+          db.ref("dms/" + activeConvoId + "/messages/" + key).update({ text: filtered });
+          const oldContent = bubble.querySelector(".chat-text, div:not(.chat-actions)");
+          const newContent = buildMessageContent(filtered);
+          if (oldContent) bubble.replaceChild(newContent, oldContent);
+        }
+      };
 
       const delBtn     = document.createElement("button");
       delBtn.className = "chat-action-btn del";
@@ -1195,6 +1215,8 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
           row.remove();
         }
       };
+
+      actions.appendChild(editBtn);
       actions.appendChild(delBtn);
       bubble.appendChild(actions);
     }
