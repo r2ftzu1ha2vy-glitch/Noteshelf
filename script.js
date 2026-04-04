@@ -96,6 +96,50 @@ setTimeout(() => {
 }, 1200);
 
 // =====================================
+// FIREBASE INIT
+// =====================================
+const firebaseConfig = {
+  apiKey:      "AIzaSyDPHnqalZ-wV4XPtZi95yT-2pHsZ7gN1dI",
+  authDomain:  "noteshelf-5cebe.firebaseapp.com",
+  databaseURL: "https://noteshelf-5cebe-default-rtdb.firebaseio.com/",
+  projectId:   "noteshelf-5cebe",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// =====================================
+// SESSION STATE
+// =====================================
+// Only the username is kept in sessionStorage for "who is logged in right now".
+// Everything else (password hash, avatar, friends) lives in Firebase under /users/<username>.
+
+let _sessionUser   = sessionStorage.getItem("ns_user")   || null;
+let _sessionAvatar = sessionStorage.getItem("ns_avatar")  || "";
+
+function me()       { return _sessionUser; }
+function myAvatar() { return _sessionAvatar; }
+
+function setSession(username, avatar) {
+  _sessionUser   = username;
+  _sessionAvatar = avatar || "";
+  sessionStorage.setItem("ns_user",   username);
+  sessionStorage.setItem("ns_avatar", _sessionAvatar);
+}
+
+function clearSession() {
+  _sessionUser   = null;
+  _sessionAvatar = "";
+  sessionStorage.removeItem("ns_user");
+  sessionStorage.removeItem("ns_avatar");
+}
+
+// =====================================
+// ADMIN USERS
+// =====================================
+const adminUsers = ["R2FtZU1ha2Vy", "GDFlame05"];
+
+// =====================================
 // DOM READY
 // =====================================
 document.addEventListener("DOMContentLoaded", () => {
@@ -120,10 +164,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const avatarPreview   = document.getElementById("avatar-preview");
   const globalMsgPopup  = document.getElementById("global-message-popup");
 
-  const usersKey   = "users";
-  const adminUsers = ["R2FtZU1ha2Vy", "GDFlame05"];
-  let users        = JSON.parse(localStorage.getItem(usersKey) || "{}");
-
   // ── Game card ──
   function createGameButton(game) {
     const btn = document.createElement("button");
@@ -139,7 +179,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return btn;
   }
 
-  function renderGames(filter = "") {
+  function renderGames(filter) {
+    filter = filter || "";
     gameListDiv.innerHTML = "";
     games.filter(g => g.name.toLowerCase().includes(filter.toLowerCase()))
          .forEach(g => gameListDiv.appendChild(createGameButton(g)));
@@ -151,9 +192,9 @@ document.addEventListener("DOMContentLoaded", () => {
          .forEach(g => gameListDiv.appendChild(createGameButton(g)));
   }
 
-  searchBar?.addEventListener("input", e => renderGames(e.target.value));
+  searchBar && searchBar.addEventListener("input", e => renderGames(e.target.value));
 
-  // ── Category sidebar with SVG icons ──
+  // ── Category sidebar ──
   const categories = ["All Games","Horror","Puzzle","Racing","Action","Rpg","Sports","Chill","Timing","Defense","Reflex","Annoying"];
   let activeBtn = null;
 
@@ -182,40 +223,62 @@ document.addEventListener("DOMContentLoaded", () => {
     categorySidebar.appendChild(btn);
   });
 
-  categorySidebar.firstChild?.classList.add("active");
-  activeBtn = categorySidebar.firstChild;
+  if (categorySidebar.firstChild) {
+    categorySidebar.firstChild.classList.add("active");
+    activeBtn = categorySidebar.firstChild;
+  }
   renderGames();
 
   // ── Trailers ──
-  document.getElementById("trailer-btn")?.addEventListener("click", () => {
-    trailerPopup.innerHTML = "";
-    trailerPopup.appendChild(closeTrailerBtn);
-    newGameTrailers.forEach(game => {
-      const title = document.createElement("h3");
-      title.textContent = game.name;
-      Object.assign(title.style, { margin: "12px 0 6px", textAlign: "center" });
-      const video = document.createElement("video");
-      video.src = game.trailer; video.controls = true; video.preload = "metadata";
-      Object.assign(video.style, { width: "100%", maxHeight: "300px", marginBottom: "16px" });
-      trailerPopup.appendChild(title);
-      trailerPopup.appendChild(video);
+  const trailerBtnEl = document.getElementById("trailer-btn");
+  if (trailerBtnEl) {
+    trailerBtnEl.addEventListener("click", () => {
+      trailerPopup.innerHTML = "";
+      trailerPopup.appendChild(closeTrailerBtn);
+      newGameTrailers.forEach(game => {
+        const title = document.createElement("h3");
+        title.textContent = game.name;
+        Object.assign(title.style, { margin: "12px 0 6px", textAlign: "center" });
+        const video = document.createElement("video");
+        video.src = game.trailer; video.controls = true; video.preload = "metadata";
+        Object.assign(video.style, { width: "100%", maxHeight: "300px", marginBottom: "16px" });
+        trailerPopup.appendChild(title);
+        trailerPopup.appendChild(video);
+      });
+      trailerPopup.style.display = "block";
     });
-    trailerPopup.style.display = "block";
+  }
+
+  // ── Pending avatar base64 during signup ──
+  let pendingAvatarB64 = "";
+
+  avatarInput && avatarInput.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingAvatarB64 = reader.result;
+      avatarPreview.src = pendingAvatarB64;
+      avatarPreview.style.display = "block";
+    };
+    reader.readAsDataURL(file);
   });
 
-  // ── Auth ──
-  signupBtn?.addEventListener("click", () => {
-    authTitle.textContent = "Sign Up";
+  // ── Open auth popup ──
+  function openAuth(mode) {
+    authTitle.textContent = mode;
     authPopup.style.display = "flex";
     authUsername.value = authPassword.value = authMessage.textContent = "";
-  });
-  loginBtn?.addEventListener("click", () => {
-    authTitle.textContent = "Log In";
-    authPopup.style.display = "flex";
-    authUsername.value = authPassword.value = authMessage.textContent = "";
-  });
-  closeAuthBtn?.addEventListener("click", () => { authPopup.style.display = "none"; });
+    pendingAvatarB64 = "";
+    avatarPreview.style.display = "none";
+    avatarPreview.src = "";
+  }
 
+  signupBtn && signupBtn.addEventListener("click", () => openAuth("Sign Up"));
+  loginBtn  && loginBtn.addEventListener("click",  () => openAuth("Log In"));
+  closeAuthBtn && closeAuthBtn.addEventListener("click", () => { authPopup.style.display = "none"; });
+
+  // Double-click to reveal password
   authPassword.dataset.visible = "false";
   authPassword.addEventListener("dblclick", () => {
     const v = authPassword.dataset.visible === "true";
@@ -223,70 +286,75 @@ document.addEventListener("DOMContentLoaded", () => {
     authPassword.type = v ? "password" : "text";
   });
 
-  avatarInput?.addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      avatarPreview.src = reader.result;
-      avatarPreview.style.display = "block";
-      localStorage.setItem("userAvatar", reader.result);
-    };
-    reader.readAsDataURL(file);
-  });
+  // ── Simple hash (not cryptographic — matches original plain-text approach but obfuscated) ──
+  function simpleHash(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
+    return h.toString(36);
+  }
 
-  authSubmit?.addEventListener("click", () => {
+  // ── Auth submit ──
+  authSubmit && authSubmit.addEventListener("click", async () => {
     const username = authUsername.value.trim();
     const password = authPassword.value.trim();
     if (username.length < 5) { authMessage.textContent = "❌ Username must be at least 5 characters"; return; }
+    if (!password)            { authMessage.textContent = "❌ Password is required"; return; }
+
+    const userRef  = db.ref("users/" + username);
+    const snap     = await userRef.once("value");
+    const userData = snap.val();
 
     if (authTitle.textContent === "Sign Up") {
-      if (users[username]) { authMessage.textContent = "❌ Username already taken"; return; }
-      const avatarData = localStorage.getItem("userAvatar") || "";
-      users[username] = { password, isAdmin: adminUsers.includes(username), avatar: avatarData };
-      localStorage.setItem(usersKey, JSON.stringify(users));
-      localStorage.setItem("username", username);
-      if (avatarData) localStorage.setItem("avatar_" + username, avatarData);
+      if (userData) { authMessage.textContent = "❌ Username already taken"; return; }
+      const newUser = {
+        passwordHash: simpleHash(password),
+        isAdmin:      adminUsers.includes(username),
+        avatar:       pendingAvatarB64,
+        createdAt:    Date.now(),
+      };
+      await userRef.set(newUser);
       authPopup.style.display = "none";
-      updateUIAfterLogin(username);
+      setSession(username, pendingAvatarB64);
+      updateUIAfterLogin(username, pendingAvatarB64, newUser.isAdmin);
       return;
     }
 
     if (authTitle.textContent === "Log In") {
-      if (!users[username])                      { authMessage.textContent = "❌ Username does not exist"; return; }
-      if (users[username].password !== password)  { authMessage.textContent = "❌ Wrong password"; return; }
-      localStorage.setItem("username", username);
-      if (users[username].avatar) localStorage.setItem("avatar_" + username, users[username].avatar);
+      if (!userData) { authMessage.textContent = "❌ Username does not exist"; return; }
+      if (userData.passwordHash !== simpleHash(password)) { authMessage.textContent = "❌ Wrong password"; return; }
       authPopup.style.display = "none";
-      updateUIAfterLogin(username);
+      setSession(username, userData.avatar || "");
+      updateUIAfterLogin(username, userData.avatar || "", userData.isAdmin);
     }
   });
 
-  function updateUIAfterLogin(username) {
-    logoutBtn.style.display = "inline-flex";
+  // ── Update UI after login ──
+  function updateUIAfterLogin(username, avatar, isAdmin) {
+    logoutBtn.style.display      = "inline-flex";
     usernameDisplay.style.display = "inline-block";
-    usernameDisplay.textContent = username;
+    usernameDisplay.textContent   = username;
     signupBtn.style.display = loginBtn.style.display = "none";
 
-    users = JSON.parse(localStorage.getItem(usersKey) || "{}");
-    const savedAvatar = users[username]?.avatar || localStorage.getItem("userAvatar");
-    if (savedAvatar) {
-      userAvatar.src = savedAvatar;
+    if (avatar) {
+      userAvatar.src           = avatar;
       userAvatar.style.display = "inline-block";
-      localStorage.setItem("avatar_" + username, savedAvatar);
     } else {
       userAvatar.style.display = "none";
     }
 
-    adminPanel.style.display = users[username]?.isAdmin ? "block" : "none";
+    adminPanel.style.display = isAdmin ? "block" : "none";
+
+    // notify DM system
+    window.dispatchEvent(new CustomEvent("ns_login", { detail: { username, avatar } }));
   }
 
-  logoutBtn?.addEventListener("click", () => {
-    localStorage.removeItem("username");
+  logoutBtn && logoutBtn.addEventListener("click", () => {
+    clearSession();
     usernameDisplay.style.display = userAvatar.style.display = "none";
-    logoutBtn.style.display = "none";
+    logoutBtn.style.display       = "none";
     signupBtn.style.display = loginBtn.style.display = "inline-flex";
     adminPanel.style.display = "none";
+    window.dispatchEvent(new CustomEvent("ns_logout"));
   });
 
   // ── Global message ──
@@ -301,30 +369,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3200);
   }
 
-  document.getElementById("global-message-send")?.addEventListener("click", () => {
+  const globalMsgSend = document.getElementById("global-message-send");
+  globalMsgSend && globalMsgSend.addEventListener("click", () => {
     const msg = prompt("Enter global message:");
     if (msg) triggerGlobalMessage(msg);
   });
-  document.getElementById("close-admin")?.addEventListener("click", () => { adminPanel.style.display = "none"; });
 
-  const currentUser = localStorage.getItem("username");
-  if (currentUser) updateUIAfterLogin(currentUser);
+  const closeAdminBtn = document.getElementById("close-admin");
+  closeAdminBtn && closeAdminBtn.addEventListener("click", () => { adminPanel.style.display = "none"; });
+
+  // ── Restore session ──
+  if (me()) {
+    db.ref("users/" + me()).once("value").then(snap => {
+      const data = snap.val();
+      if (data) {
+        setSession(me(), data.avatar || "");
+        updateUIAfterLogin(me(), data.avatar || "", data.isAdmin);
+      } else {
+        clearSession();
+      }
+    });
+  }
 });
 
 // =====================================
-// FIREBASE + CHAT
+// CHAT SYSTEM
 // =====================================
-const firebaseConfig = {
-  apiKey:      "AIzaSyDPHnqalZ-wV4XPtZi95yT-2pHsZ7gN1dI",
-  authDomain:  "noteshelf-5cebe.firebaseapp.com",
-  databaseURL: "https://noteshelf-5cebe-default-rtdb.firebaseio.com/",
-  projectId:   "noteshelf-5cebe",
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-// ── DOM refs ──
 const chatToggle      = document.getElementById("chat-toggle");
 const chatPanel       = document.getElementById("chat-panel");
 const chatCloseBtn    = document.getElementById("chat-close");
@@ -338,11 +408,10 @@ const onlineCount     = document.getElementById("chat-online-count");
 const typingRef       = db.ref("typing");
 const presenceRef     = db.ref("presence");
 
-let isPanelOpen  = false;
-let unreadCount  = 0;
-let lastDate     = null;
+let isPanelOpen = false;
+let unreadCount = 0;
+let lastDate    = null;
 
-// ── Open / Close ──
 chatToggle.onclick = () => {
   isPanelOpen = true;
   chatPanel.style.display = "flex";
@@ -355,13 +424,12 @@ chatCloseBtn.onclick = () => {
   chatPanel.style.display = "none";
 };
 
-// ── Char counter ──
 chatInput.addEventListener("input", () => {
   const remaining = 300 - chatInput.value.length;
   chatCharCount.textContent = remaining;
   chatCharCount.style.color = remaining < 30 ? "#ff6b6b" : "";
 
-  const user = localStorage.getItem("username") || "Guest";
+  const user = me() || "Guest";
   if (chatInput.value.trim()) {
     typingRef.child(user).set(true);
     clearTimeout(chatInput._typingTimer);
@@ -371,37 +439,37 @@ chatInput.addEventListener("input", () => {
   }
 });
 
-// ── Typing listener ──
 typingRef.on("value", snap => {
   const data = snap.val();
-  const me   = localStorage.getItem("username") || "Guest";
+  const user = me() || "Guest";
   if (!data) { typingIndicator.innerHTML = ""; return; }
-  const others = Object.keys(data).filter(u => u !== me);
+  const others = Object.keys(data).filter(u => u !== user);
   if (others.length) {
-    typingIndicator.innerHTML = `
-      <span>${others.join(", ")} typing</span>
-      <span class="typing-dots"><span></span><span></span><span></span></span>`;
+    typingIndicator.innerHTML = `<span>${others.join(", ")} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
   } else {
     typingIndicator.innerHTML = "";
   }
 });
 
 // ── Presence ──
-const currentUser = () => localStorage.getItem("username") || "Guest";
-
 function goOnline() {
-  const ref = presenceRef.child(currentUser());
+  const user = me() || "Guest";
+  const ref  = presenceRef.child(user);
   ref.set(true);
   ref.onDisconnect().remove();
 }
 goOnline();
+window.addEventListener("ns_login",  () => goOnline());
+window.addEventListener("ns_logout", () => {
+  presenceRef.child("Guest").remove();
+});
 
 presenceRef.on("value", snap => {
   const count = snap.numChildren();
   onlineCount.textContent = count > 0 ? `${count} online` : "0 online";
 });
 
-// ── Bad word filter ──
+// ── Profanity filter ──
 const badWords = ["nigger","nigga","fuck","shit","niga","sex","bitch"];
 function filterMessage(msg) {
   let clean = msg;
@@ -409,10 +477,9 @@ function filterMessage(msg) {
   return clean;
 }
 
-// ── Format timestamp ──
+// ── Helpers ──
 function formatTime(ts) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 function formatDate(ts) {
   const d   = new Date(ts);
@@ -422,10 +489,7 @@ function formatDate(ts) {
   if (d.toDateString() === yest.toDateString()) return "Yesterday";
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
-
-function getInitials(name) {
-  return name ? name.charAt(0).toUpperCase() : "?";
-}
+function getInitials(name) { return name ? name.charAt(0).toUpperCase() : "?"; }
 
 function buildAvatar(username, avatarUrl) {
   const el = document.createElement("div");
@@ -441,7 +505,6 @@ function buildAvatar(username, avatarUrl) {
   return el;
 }
 
-// ── Edit / Delete helpers ──
 function editMessage(msgKey, textEl) {
   const newText = prompt("Edit message:", textEl.textContent);
   if (newText && newText.trim()) {
@@ -457,20 +520,17 @@ function deleteMessage(msgKey, rowEl) {
   }
 }
 
-// ── Send message ──
 function sendMessage() {
-  const user = currentUser();
+  const user = me() || "Guest";
   let msg = chatInput.value.trim();
   if (!msg) return;
   msg = filterMessage(msg);
 
-  const avatar = localStorage.getItem("avatar_" + user) || "";
-
   db.ref("messages").push({
     user,
-    text: msg,
-    avatar,
-    time: Date.now(),
+    text:   msg,
+    avatar: myAvatar(),
+    time:   Date.now(),
   });
 
   chatInput.value = "";
@@ -481,23 +541,22 @@ function sendMessage() {
 chatSend.onclick = sendMessage;
 chatInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-// ── Render messages ──
 const seenKeys = new Set();
 
 db.ref("messages").limitToLast(60).on("child_added", snap => {
   if (seenKeys.has(snap.key)) return;
   seenKeys.add(snap.key);
 
-  const data         = snap.val();
-  const msgKey       = snap.key;
-  const me           = currentUser();
-  const isMe         = data.user === me;
+  const data   = snap.val();
+  const msgKey = snap.key;
+  const user   = me() || "Guest";
+  const isMe   = data.user === user;
 
   const msgDate = formatDate(data.time);
   if (msgDate !== lastDate) {
     lastDate = msgDate;
     const divider = document.createElement("div");
-    divider.className = "chat-day-divider";
+    divider.className   = "chat-day-divider";
     divider.textContent = msgDate;
     chatMessages.appendChild(divider);
   }
@@ -505,15 +564,13 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   const row = document.createElement("div");
   row.classList.add("chat-row", isMe ? "me" : "other");
 
-  const avatarSrc = data.avatar || localStorage.getItem("avatar_" + data.user) || "";
-  const avatar    = buildAvatar(data.user, avatarSrc);
-
-  const group = document.createElement("div");
+  const avatar = buildAvatar(data.user, data.avatar || "");
+  const group  = document.createElement("div");
   group.className = "chat-bubble-group";
 
   if (!isMe) {
     const sender = document.createElement("div");
-    sender.className = "chat-sender";
+    sender.className   = "chat-sender";
     sender.textContent = data.user;
     group.appendChild(sender);
   }
@@ -522,7 +579,7 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   bubble.className = "chat-bubble";
 
   const textEl = document.createElement("div");
-  textEl.className = "chat-text";
+  textEl.className   = "chat-text";
   textEl.textContent = data.text;
   bubble.appendChild(textEl);
 
@@ -532,13 +589,13 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 
     const editBtn = document.createElement("button");
     editBtn.className = "chat-action-btn";
-    editBtn.title = "Edit";
+    editBtn.title     = "Edit";
     editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
     editBtn.onclick = () => editMessage(msgKey, textEl);
 
     const delBtn = document.createElement("button");
     delBtn.className = "chat-action-btn del";
-    delBtn.title = "Delete";
+    delBtn.title     = "Delete";
     delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
     delBtn.onclick = () => deleteMessage(msgKey, row);
 
@@ -550,24 +607,19 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   group.appendChild(bubble);
 
   const timeEl = document.createElement("div");
-  timeEl.className = "chat-time";
+  timeEl.className   = "chat-time";
   timeEl.textContent = formatTime(data.time);
   group.appendChild(timeEl);
 
-  if (isMe) {
-    row.appendChild(group);
-    row.appendChild(avatar);
-  } else {
-    row.appendChild(avatar);
-    row.appendChild(group);
-  }
+  if (isMe) { row.appendChild(group); row.appendChild(avatar); }
+  else       { row.appendChild(avatar); row.appendChild(group); }
 
   chatMessages.appendChild(row);
 
   if (!isPanelOpen) {
     unreadCount++;
-    chatBadge.textContent = unreadCount > 9 ? "9+" : unreadCount;
-    chatBadge.style.display = "flex";
+    chatBadge.textContent    = unreadCount > 9 ? "9+" : unreadCount;
+    chatBadge.style.display  = "flex";
   }
 
   const nearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 80;
@@ -575,9 +627,8 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 });
 
 // =====================================
-// DIRECT MESSAGES SYSTEM
+// DIRECT MESSAGES SYSTEM  (Firebase)
 // =====================================
-
 (function initDMSystem() {
 
   const dmBtnFloat    = document.getElementById("dm-btn-float");
@@ -596,36 +647,23 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   const dmCloseConvo  = document.getElementById("dm-close-convo");
   const dmToast       = document.getElementById("dm-toast");
 
-  let isDMOpen         = false;
-  let activeFriend     = null;
-  let activeConvoId    = null;
-  let dmUnreadTotal    = 0;
-  let dmUnreadByUser   = {};
-  let activeListener   = null;
-  let activeListenerRef = null;
-  let dmTypingTimer    = null;
+  let isDMOpen          = false;
+  let activeFriend      = null;
+  let activeConvoId     = null;
+  let dmUnreadTotal     = 0;
+  let dmUnreadByUser    = {};
+  let dmMsgListener     = null;
+  let dmMsgListenerRef  = null;
+  let dmTypingListener  = null;
+  let dmTypingListRef   = null;
+  let dmTypingTimer     = null;
+  let friendsWatchers   = {};   // username → Firebase listener ref
+  let localFriendsCache = [];   // mirrors Firebase snapshot
 
   // ── Helpers ──
-  function me() { return localStorage.getItem("username") || null; }
-
-  function convoId(a, b) { return [a, b].sort().join("__"); }
-
-  function getUsers() { return JSON.parse(localStorage.getItem("users") || "{}"); }
-
-  function getFriends() {
-    const user = me();
-    if (!user) return [];
-    return JSON.parse(localStorage.getItem("friends_" + user) || "[]");
-  }
-
-  function saveFriends(list) {
-    const user = me();
-    if (!user) return;
-    localStorage.setItem("friends_" + user, JSON.stringify(list));
-  }
-
-  function getAvatarFor(username) {
-    return localStorage.getItem("avatar_" + username) || "";
+  function convoId(a, b) {
+    if (a === b) return a + "__self";
+    return [a, b].sort().join("__");
   }
 
   function showToast(msg) {
@@ -634,17 +672,16 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     setTimeout(() => dmToast.classList.remove("show"), 2600);
   }
 
-  function buildAvatarEl(username, size) {
+  function buildAvatarEl(username, avatarUrl, size) {
     size = size || 32;
     const el = document.createElement("div");
-    el.className = "dm-friend-avatar";
-    el.style.width = size + "px";
-    el.style.height = size + "px";
-    const av = getAvatarFor(username);
-    if (av) {
+    el.className      = "dm-friend-avatar";
+    el.style.width    = size + "px";
+    el.style.height   = size + "px";
+    if (avatarUrl) {
       const img = document.createElement("img");
-      img.src = av;
-      img.onerror = () => { el.removeChild(img); el.textContent = getInitials(username); };
+      img.src      = avatarUrl;
+      img.onerror  = () => { el.removeChild(img); el.textContent = getInitials(username); };
       el.appendChild(img);
     } else {
       el.textContent = getInitials(username);
@@ -659,22 +696,28 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   function refreshUnreadBadge() {
     dmUnreadTotal = Object.values(dmUnreadByUser).reduce((a, b) => a + b, 0);
     if (dmUnreadTotal > 0) {
-      dmUnreadBadge.textContent = dmUnreadTotal > 9 ? "9+" : dmUnreadTotal;
-      dmUnreadBadge.style.display = "flex";
+      dmUnreadBadge.textContent    = dmUnreadTotal > 9 ? "9+" : dmUnreadTotal;
+      dmUnreadBadge.style.display  = "flex";
     } else {
-      dmUnreadBadge.style.display = "none";
+      dmUnreadBadge.style.display  = "none";
     }
   }
 
+  // ── Friends reference in Firebase ──
+  // Path: /friends/<username>/<friendUsername> = { addedAt: timestamp, preview: "..." }
+  function friendsRef(username) {
+    return db.ref("friends/" + username);
+  }
+
   // ── Open / Close panel ──
-  dmBtnFloat.onclick = (e) => {
+  dmBtnFloat.onclick = e => {
     e.stopPropagation();
     isDMOpen = !isDMOpen;
     dmPanel.style.display = isDMOpen ? "flex" : "none";
     if (isDMOpen && activeFriend) {
       dmUnreadByUser[activeFriend] = 0;
       refreshUnreadBadge();
-      renderFriendsList();
+      renderFriendsList(localFriendsCache);
     }
   };
 
@@ -686,57 +729,103 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   });
 
   // ── Add friend ──
-  function addFriend() {
+  async function addFriend() {
     const user = me();
     if (!user) { showToast("⚠ Log in first"); return; }
+
     const target = dmAddInput.value.trim();
     if (!target) return;
-    if (target === user) { showToast("⚠ That's you!"); dmAddInput.value = ""; return; }
 
-    const users = getUsers();
-    if (!users[target]) { showToast("✗ User not found"); return; }
-
-    const friends = getFriends();
-    if (friends.includes(target)) { showToast("Already friends"); dmAddInput.value = ""; return; }
-
-    friends.push(target);
-    saveFriends(friends);
     dmAddInput.value = "";
-    showToast("✓ Added " + target);
-    renderFriendsList();
-    watchFriendDMs(target);
+
+    // Check if already in friends list
+    if (localFriendsCache.includes(target)) {
+      showToast("Already added");
+      return;
+    }
+
+    // Write to Firebase — both directions so both users can see each other
+    const ts = Date.now();
+    await friendsRef(user).child(target).set({ addedAt: ts, preview: "" });
+
+    // Self-add: no need for reverse entry
+    if (target !== user) {
+      // Also add reverse so the other person sees this user when they log in
+      // (optional but nice for mutual friend lists)
+      // We do NOT force it on the other user — they choose to add back.
+      // Just write the entry for ourselves.
+    }
+
+    showToast(target === user ? "✓ Added yourself (notes to self)" : "✓ Added " + target);
   }
 
   dmAddBtn.onclick = addFriend;
   dmAddInput.addEventListener("keydown", e => { if (e.key === "Enter") addFriend(); });
 
   // ── Remove friend ──
-  function removeFriend(target) {
-    const friends = getFriends().filter(f => f !== target);
-    saveFriends(friends);
+  async function removeFriend(target) {
+    const user = me();
+    if (!user) return;
+    await friendsRef(user).child(target).remove();
     if (activeFriend === target) closeConversation();
     delete dmUnreadByUser[target];
     refreshUnreadBadge();
-    renderFriendsList();
     showToast("Removed " + target);
+    // Stop watcher for this friend
+    if (friendsWatchers[target]) {
+      friendsWatchers[target].ref.off("child_added", friendsWatchers[target].cb);
+      delete friendsWatchers[target];
+    }
+  }
+
+  // ── Listen to friends list in Firebase (real-time) ──
+  let friendsListRef    = null;
+  let friendsListenerOn = false;
+
+  function startFriendsListener(username) {
+    if (friendsListRef) {
+      friendsListRef.off();
+      friendsListenerOn = false;
+    }
+    friendsListRef = friendsRef(username);
+    friendsListenerOn = true;
+
+    friendsListRef.on("value", snap => {
+      const data = snap.val() || {};
+      localFriendsCache = Object.keys(data);
+      renderFriendsList(localFriendsCache, data);
+      // Start incoming message watchers for any new friends
+      localFriendsCache.forEach(f => {
+        if (!friendsWatchers[f]) watchIncoming(f);
+      });
+    });
+  }
+
+  function stopFriendsListener() {
+    if (friendsListRef) { friendsListRef.off(); friendsListRef = null; }
+    friendsListenerOn = false;
+    localFriendsCache = [];
+    Object.values(friendsWatchers).forEach(w => w.ref.off("child_added", w.cb));
+    friendsWatchers = {};
   }
 
   // ── Render friends list ──
-  function renderFriendsList() {
-    const friends = getFriends();
+  function renderFriendsList(friends, previewData) {
+    friends     = friends     || localFriendsCache;
+    previewData = previewData || {};
     dmFriendsList.innerHTML = "";
 
     if (!me()) {
       const empty = document.createElement("div");
-      empty.className = "dm-empty";
+      empty.className   = "dm-empty";
       empty.textContent = "Log in to use Direct Messages.";
       dmFriendsList.appendChild(empty);
       return;
     }
 
-    if (friends.length === 0) {
+    if (!friends.length) {
       const empty = document.createElement("div");
-      empty.className = "dm-empty";
+      empty.className   = "dm-empty";
       empty.textContent = "Add a friend to start chatting privately.";
       dmFriendsList.appendChild(empty);
       return;
@@ -746,37 +835,51 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
       const row = document.createElement("div");
       row.className = "dm-friend-row" + (friend === activeFriend ? " active" : "");
 
-      const avatar = buildAvatarEl(friend, 32);
-      const info = document.createElement("div");
+      // Fetch avatar from Firebase if possible
+      const avatarEl = buildAvatarEl(friend, "", 32);
+      db.ref("users/" + friend + "/avatar").once("value").then(s => {
+        const av = s.val() || "";
+        if (av) {
+          avatarEl.innerHTML = "";
+          const img       = document.createElement("img");
+          img.src         = av;
+          img.onerror     = () => { avatarEl.innerHTML = ""; avatarEl.textContent = getInitials(friend); };
+          avatarEl.appendChild(img);
+        } else {
+          avatarEl.textContent = getInitials(friend);
+        }
+      });
+
+      const info    = document.createElement("div");
       info.className = "dm-friend-info";
 
-      const name = document.createElement("div");
-      name.className = "dm-friend-name";
-      name.textContent = friend;
+      const name    = document.createElement("div");
+      name.className   = "dm-friend-name";
+      name.textContent = friend === me() ? friend + " (You)" : friend;
 
       const preview = document.createElement("div");
-      preview.className = "dm-friend-preview";
-      preview.textContent = localStorage.getItem("dm_preview_" + convoId(me(), friend)) || "No messages yet";
+      preview.className   = "dm-friend-preview";
+      preview.textContent = (previewData[friend] && previewData[friend].preview) || "No messages yet";
 
       info.appendChild(name);
       info.appendChild(preview);
 
-      row.appendChild(avatar);
+      row.appendChild(avatarEl);
       row.appendChild(info);
 
       const unread = dmUnreadByUser[friend] || 0;
       if (unread > 0) {
-        const badge = document.createElement("div");
-        badge.className = "dm-friend-badge";
-        badge.textContent = unread > 9 ? "9+" : unread;
+        const badge         = document.createElement("div");
+        badge.className     = "dm-friend-badge";
+        badge.textContent   = unread > 9 ? "9+" : unread;
         row.appendChild(badge);
       }
 
       const removeBtn = document.createElement("button");
       removeBtn.className = "dm-remove-btn";
-      removeBtn.title = "Remove friend";
+      removeBtn.title     = "Remove";
       removeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-      removeBtn.onclick = e => { e.stopPropagation(); removeFriend(friend); };
+      removeBtn.onclick   = e => { e.stopPropagation(); removeFriend(friend); };
       row.appendChild(removeBtn);
 
       row.onclick = () => openConversation(friend);
@@ -789,50 +892,73 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     activeFriend  = friend;
     activeConvoId = convoId(me(), friend);
 
-    if (activeListenerRef && activeListener) {
-      activeListenerRef.off("child_added", activeListener);
+    // Detach old listeners
+    if (dmMsgListenerRef && dmMsgListener) {
+      dmMsgListenerRef.off("child_added", dmMsgListener);
+      dmMsgListener    = null;
+      dmMsgListenerRef = null;
+    }
+    if (dmTypingListRef && dmTypingListener) {
+      dmTypingListRef.off("value", dmTypingListener);
+      dmTypingListener = null;
+      dmTypingListRef  = null;
     }
 
     dmUnreadByUser[friend] = 0;
     refreshUnreadBadge();
 
-    dmNoConvo.style.display  = "none";
-    dmConvo.style.display    = "flex";
-    dmChatWith.textContent   = friend;
-    dmMessages.innerHTML     = "";
+    dmNoConvo.style.display = "none";
+    dmConvo.style.display   = "flex";
+    dmChatWith.textContent  = friend === me() ? friend + " (You — Notes to self)" : friend;
+    dmMessages.innerHTML    = "";
 
-    renderFriendsList();
+    renderFriendsList(localFriendsCache);
 
+    // Listen for messages
     const messagesRef = db.ref("dms/" + activeConvoId + "/messages");
-    activeListenerRef = messagesRef;
-    activeListener = messagesRef.limitToLast(50).on("child_added", snap => {
+    dmMsgListenerRef  = messagesRef;
+    dmMsgListener     = messagesRef.limitToLast(60).on("child_added", snap => {
       const data = snap.val();
       appendDMMessage(data, snap.key);
-      localStorage.setItem("dm_preview_" + activeConvoId, data.text.substring(0, 32) + (data.text.length > 32 ? "…" : ""));
-      renderFriendsList();
+      // Update preview in Firebase
+      const previewText = (data.text || "").substring(0, 32) + ((data.text || "").length > 32 ? "…" : "");
+      friendsRef(me()).child(friend).update({ preview: previewText });
       dmMessages.scrollTop = dmMessages.scrollHeight;
     });
 
-    db.ref("dm_typing/" + activeConvoId + "/" + friend).on("value", snap => {
-      if (snap.val()) {
-        dmTypingEl.innerHTML = `<span>${friend} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
-      } else {
-        dmTypingEl.innerHTML = "";
-      }
-    });
+    // Listen for typing (only meaningful in two-person convos)
+    if (friend !== me()) {
+      dmTypingListRef  = db.ref("dm_typing/" + activeConvoId + "/" + friend);
+      dmTypingListener = dmTypingListRef.on("value", snap => {
+        if (snap.val()) {
+          dmTypingEl.innerHTML = `<span>${friend} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
+        } else {
+          dmTypingEl.innerHTML = "";
+        }
+      });
+    } else {
+      dmTypingEl.innerHTML = "";
+    }
 
     dmInput.focus();
   }
 
   function closeConversation() {
-    if (activeListenerRef && activeListener) {
-      activeListenerRef.off("child_added", activeListener);
+    if (dmMsgListenerRef && dmMsgListener) {
+      dmMsgListenerRef.off("child_added", dmMsgListener);
+      dmMsgListener    = null;
+      dmMsgListenerRef = null;
+    }
+    if (dmTypingListRef && dmTypingListener) {
+      dmTypingListRef.off("value", dmTypingListener);
+      dmTypingListener = null;
+      dmTypingListRef  = null;
     }
     activeFriend   = null;
     activeConvoId  = null;
     dmNoConvo.style.display = "flex";
     dmConvo.style.display   = "none";
-    renderFriendsList();
+    renderFriendsList(localFriendsCache);
   }
 
   dmCloseConvo.onclick = closeConversation;
@@ -845,34 +971,35 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     const row = document.createElement("div");
     row.classList.add("chat-row", isMe ? "me" : "other");
 
-    const avatar = buildAvatarEl(data.sender, 28);
+    const avatarEl = buildAvatarEl(data.sender, data.avatar || "", 28);
 
     const group = document.createElement("div");
     group.className = "chat-bubble-group";
 
     if (!isMe) {
-      const sender = document.createElement("div");
-      sender.className = "chat-sender";
+      const sender       = document.createElement("div");
+      sender.className   = "chat-sender";
       sender.textContent = data.sender;
       group.appendChild(sender);
     }
 
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble";
+    const bubble      = document.createElement("div");
+    bubble.className  = "chat-bubble";
 
-    const textEl = document.createElement("div");
-    textEl.className = "chat-text";
+    const textEl      = document.createElement("div");
+    textEl.className  = "chat-text";
     textEl.textContent = data.text;
     bubble.appendChild(textEl);
 
     if (isMe) {
-      const actions = document.createElement("div");
+      const actions  = document.createElement("div");
       actions.className = "chat-actions";
-      const delBtn = document.createElement("button");
+
+      const delBtn     = document.createElement("button");
       delBtn.className = "chat-action-btn del";
-      delBtn.title = "Delete";
+      delBtn.title     = "Delete";
       delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
-      delBtn.onclick = () => {
+      delBtn.onclick   = () => {
         if (confirm("Delete this message?")) {
           db.ref("dms/" + activeConvoId + "/messages/" + key).remove();
           row.remove();
@@ -884,13 +1011,13 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 
     group.appendChild(bubble);
 
-    const timeEl = document.createElement("div");
-    timeEl.className = "chat-time";
+    const timeEl      = document.createElement("div");
+    timeEl.className  = "chat-time";
     timeEl.textContent = formatTimeShort(data.time);
     group.appendChild(timeEl);
 
-    if (isMe) { row.appendChild(group); row.appendChild(avatar); }
-    else       { row.appendChild(avatar); row.appendChild(group); }
+    if (isMe) { row.appendChild(group); row.appendChild(avatarEl); }
+    else       { row.appendChild(avatarEl); row.appendChild(group); }
 
     dmMessages.appendChild(row);
   }
@@ -898,7 +1025,7 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   // ── Send DM ──
   function sendDM() {
     const user = me();
-    if (!user) { showToast("⚠ Log in to send messages"); return; }
+    if (!user)    { showToast("⚠ Log in to send messages"); return; }
     if (!activeFriend || !activeConvoId) return;
     const text = dmInput.value.trim();
     if (!text) return;
@@ -907,11 +1034,14 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 
     db.ref("dms/" + activeConvoId + "/messages").push({
       sender: user,
-      text: clean,
-      time: Date.now(),
+      avatar: myAvatar(),
+      text:   clean,
+      time:   Date.now(),
     });
 
-    db.ref("dm_typing/" + activeConvoId + "/" + user).remove();
+    if (activeFriend !== user) {
+      db.ref("dm_typing/" + activeConvoId + "/" + user).remove();
+    }
     clearTimeout(dmTypingTimer);
     dmInput.value = "";
   }
@@ -921,9 +1051,9 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDM(); }
   });
 
-  // ── Typing indicator ──
+  // ── Typing indicator (skip for self-DM) ──
   dmInput.addEventListener("input", () => {
-    if (!activeConvoId) return;
+    if (!activeConvoId || activeFriend === me()) return;
     const user = me();
     if (!user) return;
     if (dmInput.value.trim()) {
@@ -935,51 +1065,54 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     }
   });
 
-  // ── Watch a single friend's DMs for incoming unread count ──
-  function watchFriendDMs(friend) {
+  // ── Watch for incoming messages from a friend (for unread badges) ──
+  function watchIncoming(friend) {
     const user = me();
-    if (!user) return;
-    const cid = convoId(user, friend);
-    db.ref("dms/" + cid + "/messages")
-      .orderByChild("time")
-      .startAt(Date.now())
-      .on("child_added", snap => {
-        const data = snap.val();
-        if (data.sender === friend) {
-          if (!isDMOpen || activeFriend !== friend) {
-            dmUnreadByUser[friend] = (dmUnreadByUser[friend] || 0) + 1;
-            refreshUnreadBadge();
-            renderFriendsList();
-          }
+    if (!user || friendsWatchers[friend]) return;
+
+    const cid     = convoId(user, friend);
+    const ref     = db.ref("dms/" + cid + "/messages")
+                      .orderByChild("time")
+                      .startAt(Date.now() + 1);  // only future messages
+
+    const cb = snap => {
+      const data = snap.val();
+      // For self-DM there's no "other" sender — never badge self
+      if (friend === user) return;
+      if (data.sender === friend) {
+        if (!isDMOpen || activeFriend !== friend) {
+          dmUnreadByUser[friend] = (dmUnreadByUser[friend] || 0) + 1;
+          refreshUnreadBadge();
+          renderFriendsList(localFriendsCache);
         }
-      });
-  }
-
-  // ── Init: watch all existing friends ──
-  function initWatchers() {
-    const user = me();
-    if (!user) return;
-    getFriends().forEach(friend => watchFriendDMs(friend));
-  }
-
-  // ── Poll for login state changes ──
-  let _lastUser = me();
-  setInterval(() => {
-    const current = me();
-    if (current !== _lastUser) {
-      _lastUser = current;
-      if (current) {
-        renderFriendsList();
-        initWatchers();
-      } else {
-        closeConversation();
-        renderFriendsList();
       }
-    }
-  }, 800);
+    };
 
-  // Initial render
-  renderFriendsList();
-  initWatchers();
+    ref.on("child_added", cb);
+    friendsWatchers[friend] = { ref, cb };
+  }
+
+  // ── React to login / logout events ──
+  window.addEventListener("ns_login", e => {
+    const { username } = e.detail;
+    dmUnreadByUser     = {};
+    refreshUnreadBadge();
+    startFriendsListener(username);
+  });
+
+  window.addEventListener("ns_logout", () => {
+    stopFriendsListener();
+    closeConversation();
+    renderFriendsList([]);
+    dmUnreadByUser = {};
+    refreshUnreadBadge();
+  });
+
+  // ── Init if already logged in ──
+  if (me()) {
+    startFriendsListener(me());
+  } else {
+    renderFriendsList([]);
+  }
 
 })();
