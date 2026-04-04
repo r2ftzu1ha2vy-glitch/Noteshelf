@@ -111,9 +111,6 @@ const db = firebase.database();
 // =====================================
 // SESSION STATE
 // =====================================
-// Only the username is kept in sessionStorage for "who is logged in right now".
-// Everything else (password hash, avatar, friends) lives in Firebase under /users/<username>.
-
 let _sessionUser   = sessionStorage.getItem("ns_user")   || null;
 let _sessionAvatar = sessionStorage.getItem("ns_avatar")  || "";
 
@@ -138,6 +135,56 @@ function clearSession() {
 // ADMIN USERS
 // =====================================
 const adminUsers = ["R2FtZU1ha2Vy", "GDFlame05"];
+
+// =====================================
+// IMAGE URL DETECTION & MESSAGE CONTENT BUILDER
+// =====================================
+function isImageUrl(text) {
+  return /^https?:\/\/.+\.(png|jpg|jpeg|gif|webp|svg)(\?.*)?$/i.test(text.trim());
+}
+
+function buildMessageContent(text) {
+  if (isImageUrl(text)) {
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "margin-top:4px;";
+
+    const img = document.createElement("img");
+    img.src = text.trim();
+    img.alt = "Image";
+    img.style.cssText = [
+      "max-width:200px",
+      "max-height:180px",
+      "border-radius:10px",
+      "display:block",
+      "border:1px solid var(--ink-border)",
+      "cursor:pointer",
+      "transition:opacity 0.2s, transform 0.2s",
+      "object-fit:cover",
+    ].join(";");
+
+    img.onmouseover = () => { img.style.opacity = "0.85"; img.style.transform = "scale(1.02)"; };
+    img.onmouseout  = () => { img.style.opacity = "1";    img.style.transform = "scale(1)"; };
+    img.onclick     = () => window.open(text.trim(), "_blank");
+
+    // If image fails to load, fall back to showing the raw URL as text
+    img.onerror = () => {
+      wrap.innerHTML = "";
+      const t = document.createElement("div");
+      t.className   = "chat-text";
+      t.textContent = text;
+      wrap.appendChild(t);
+    };
+
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  // Plain text
+  const el = document.createElement("div");
+  el.className   = "chat-text";
+  el.textContent = text;
+  return el;
+}
 
 // =====================================
 // DOM READY
@@ -286,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
     authPassword.type = v ? "password" : "text";
   });
 
-  // ── Simple hash (not cryptographic — matches original plain-text approach but obfuscated) ──
+  // ── Simple hash ──
   function simpleHash(str) {
     let h = 0;
     for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
@@ -344,7 +391,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     adminPanel.style.display = isAdmin ? "block" : "none";
 
-    // notify DM system
     window.dispatchEvent(new CustomEvent("ns_login", { detail: { username, avatar } }));
   }
 
@@ -472,6 +518,8 @@ presenceRef.on("value", snap => {
 // ── Profanity filter ──
 const badWords = ["nigger","nigga","fuck","shit","niga","sex","bitch"];
 function filterMessage(msg) {
+  // Don't filter image URLs — they contain no readable words
+  if (isImageUrl(msg)) return msg;
   let clean = msg;
   badWords.forEach(w => { clean = clean.replace(new RegExp(w, "gi"), "****"); });
   return clean;
@@ -505,14 +553,23 @@ function buildAvatar(username, avatarUrl) {
   return el;
 }
 
-function editMessage(msgKey, textEl) {
-  const newText = prompt("Edit message:", textEl.textContent);
+function editMessage(msgKey, bubbleEl) {
+  // Find the current text — could be plain text node or image URL
+  const textEl = bubbleEl.querySelector(".chat-text");
+  const currentText = textEl ? textEl.textContent : bubbleEl.querySelector("img") ? bubbleEl.querySelector("img").src : "";
+  const newText = prompt("Edit message:", currentText);
   if (newText && newText.trim()) {
     const filtered = filterMessage(newText.trim());
     db.ref("messages/" + msgKey).update({ text: filtered });
-    textEl.textContent = filtered;
+    // Rebuild the content element in place
+    const oldContent = bubbleEl.querySelector(".chat-text") || bubbleEl.querySelector("div");
+    const newContent = buildMessageContent(filtered);
+    if (oldContent) {
+      bubbleEl.replaceChild(newContent, oldContent);
+    }
   }
 }
+
 function deleteMessage(msgKey, rowEl) {
   if (confirm("Delete this message?")) {
     db.ref("messages/" + msgKey).remove();
@@ -578,10 +635,9 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   const bubble = document.createElement("div");
   bubble.className = "chat-bubble";
 
-  const textEl = document.createElement("div");
-  textEl.className   = "chat-text";
-  textEl.textContent = data.text;
-  bubble.appendChild(textEl);
+  // ── Use buildMessageContent for image URL detection ──
+  const contentEl = buildMessageContent(data.text);
+  bubble.appendChild(contentEl);
 
   if (isMe) {
     const actions = document.createElement("div");
@@ -591,7 +647,7 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     editBtn.className = "chat-action-btn";
     editBtn.title     = "Edit";
     editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-    editBtn.onclick = () => editMessage(msgKey, textEl);
+    editBtn.onclick = () => editMessage(msgKey, bubble);
 
     const delBtn = document.createElement("button");
     delBtn.className = "chat-action-btn del";
@@ -657,8 +713,9 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   let dmTypingListener  = null;
   let dmTypingListRef   = null;
   let dmTypingTimer     = null;
-  let friendsWatchers   = {};   // username → Firebase listener ref
-  let localFriendsCache = [];   // mirrors Firebase snapshot
+  let friendsWatchers   = {};
+  let localFriendsCache = [];
+  let requestsListenerRef = null;
 
   // ── Helpers ──
   function convoId(a, b) {
@@ -694,9 +751,15 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   }
 
   function refreshUnreadBadge() {
-    dmUnreadTotal = Object.values(dmUnreadByUser).reduce((a, b) => a + b, 0);
-    if (dmUnreadTotal > 0) {
-      dmUnreadBadge.textContent    = dmUnreadTotal > 9 ? "9+" : dmUnreadTotal;
+    // Separate message unreads from request count
+    const msgUnread = Object.entries(dmUnreadByUser)
+      .filter(([k]) => k !== "__requests__")
+      .reduce((a, [, b]) => a + b, 0);
+    const reqCount  = dmUnreadByUser["__requests__"] || 0;
+    const total     = msgUnread + reqCount;
+
+    if (total > 0) {
+      dmUnreadBadge.textContent    = total > 9 ? "9+" : total;
       dmUnreadBadge.style.display  = "flex";
     } else {
       dmUnreadBadge.style.display  = "none";
@@ -704,7 +767,6 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   }
 
   // ── Friends reference in Firebase ──
-  // Path: /friends/<username>/<friendUsername> = { addedAt: timestamp, preview: "..." }
   function friendsRef(username) {
     return db.ref("friends/" + username);
   }
@@ -728,35 +790,44 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     }
   });
 
-  // ── Add friend ──
+  // ── Add friend (with existence check + friend request) ──
   async function addFriend() {
     const user = me();
     if (!user) { showToast("⚠ Log in first"); return; }
 
     const target = dmAddInput.value.trim();
     if (!target) return;
-
     dmAddInput.value = "";
 
-    // Check if already in friends list
-    if (localFriendsCache.includes(target)) {
-      showToast("Already added");
+    if (target === user) { showToast("⚠ Cannot add yourself"); return; }
+    if (localFriendsCache.includes(target)) { showToast("Already friends"); return; }
+
+    // Check the target user exists in Firebase
+    const userSnap = await db.ref("users/" + target).once("value");
+    if (!userSnap.exists()) { showToast("❌ User not found"); return; }
+
+    // Check if a request was already sent
+    const existingReq = await db.ref("friend_requests/" + target + "/" + user).once("value");
+    if (existingReq.exists()) { showToast("Request already sent"); return; }
+
+    // Check if they already sent us one — auto-accept if so
+    const theirReq = await db.ref("friend_requests/" + user + "/" + target).once("value");
+    if (theirReq.exists()) {
+      await friendsRef(user).child(target).set({ addedAt: Date.now(), preview: "" });
+      await friendsRef(target).child(user).set({ addedAt: Date.now(), preview: "" });
+      await db.ref("friend_requests/" + user + "/" + target).remove();
+      showToast("✓ Now friends with " + target);
       return;
     }
 
-    // Write to Firebase — both directions so both users can see each other
-    const ts = Date.now();
-    await friendsRef(user).child(target).set({ addedAt: ts, preview: "" });
+    // Send the friend request
+    await db.ref("friend_requests/" + target + "/" + user).set({
+      from:   user,
+      avatar: myAvatar(),
+      sentAt: Date.now(),
+    });
 
-    // Self-add: no need for reverse entry
-    if (target !== user) {
-      // Also add reverse so the other person sees this user when they log in
-      // (optional but nice for mutual friend lists)
-      // We do NOT force it on the other user — they choose to add back.
-      // Just write the entry for ourselves.
-    }
-
-    showToast(target === user ? "✓ Added yourself (notes to self)" : "✓ Added " + target);
+    showToast("✓ Friend request sent to " + target);
   }
 
   dmAddBtn.onclick = addFriend;
@@ -771,11 +842,128 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     delete dmUnreadByUser[target];
     refreshUnreadBadge();
     showToast("Removed " + target);
-    // Stop watcher for this friend
     if (friendsWatchers[target]) {
       friendsWatchers[target].ref.off("child_added", friendsWatchers[target].cb);
       delete friendsWatchers[target];
     }
+  }
+
+  // ── Listen for incoming friend requests ──
+  function listenForFriendRequests(username) {
+    if (requestsListenerRef) {
+      requestsListenerRef.off();
+      requestsListenerRef = null;
+    }
+
+    requestsListenerRef = db.ref("friend_requests/" + username);
+
+    requestsListenerRef.on("value", snap => {
+      const requests = snap.val() || {};
+      const keys     = Object.keys(requests);
+
+      // Remove old request section if it exists
+      const old = document.getElementById("dm-requests-section");
+      if (old) old.remove();
+
+      // Clear the request badge slot
+      dmUnreadByUser["__requests__"] = keys.length;
+      refreshUnreadBadge();
+
+      if (!keys.length) return;
+
+      const section = document.createElement("div");
+      section.id = "dm-requests-section";
+      section.style.cssText = [
+        "border-bottom:1px solid var(--ink-border)",
+        "padding:6px 0 4px",
+        "background:rgba(255,215,0,0.03)",
+      ].join(";");
+
+      const heading = document.createElement("div");
+      heading.style.cssText = [
+        "font-family:'Cinzel',serif",
+        "font-size:9px",
+        "letter-spacing:2px",
+        "text-transform:uppercase",
+        "color:var(--gold-dim)",
+        "padding:4px 12px 6px",
+        "opacity:0.75",
+        "display:flex",
+        "align-items:center",
+        "gap:6px",
+      ].join(";");
+      heading.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg> Requests (${keys.length})`;
+      section.appendChild(heading);
+
+      keys.forEach(fromUser => {
+        const req = requests[fromUser];
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:8px;padding:5px 10px;";
+
+        const av = buildAvatarEl(fromUser, req.avatar || "", 28);
+
+        const name = document.createElement("div");
+        name.style.cssText = "flex:1;font-family:'Cinzel',serif;font-size:10px;color:var(--gold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        name.textContent   = fromUser;
+
+        const acceptBtn = document.createElement("button");
+        acceptBtn.style.cssText = [
+          "padding:3px 9px",
+          "border-radius:20px",
+          "border:1px solid rgba(46,204,113,0.5)",
+          "background:rgba(46,204,113,0.08)",
+          "color:#2ecc71",
+          "font-family:'Cinzel',serif",
+          "font-size:9px",
+          "letter-spacing:1px",
+          "cursor:pointer",
+          "transition:all 0.2s",
+          "flex-shrink:0",
+        ].join(";");
+        acceptBtn.textContent = "Accept";
+        acceptBtn.onmouseover = () => { acceptBtn.style.background = "rgba(46,204,113,0.18)"; };
+        acceptBtn.onmouseout  = () => { acceptBtn.style.background = "rgba(46,204,113,0.08)"; };
+        acceptBtn.onclick = async () => {
+          const ts = Date.now();
+          await friendsRef(username).child(fromUser).set({ addedAt: ts, preview: "" });
+          await friendsRef(fromUser).child(username).set({ addedAt: ts, preview: "" });
+          await db.ref("friend_requests/" + username + "/" + fromUser).remove();
+          showToast("✓ Now friends with " + fromUser);
+        };
+
+        const declineBtn = document.createElement("button");
+        declineBtn.style.cssText = [
+          "padding:3px 9px",
+          "border-radius:20px",
+          "border:1px solid rgba(255,107,107,0.4)",
+          "background:rgba(255,107,107,0.06)",
+          "color:var(--red)",
+          "font-family:'Cinzel',serif",
+          "font-size:9px",
+          "letter-spacing:1px",
+          "cursor:pointer",
+          "margin-left:4px",
+          "transition:all 0.2s",
+          "flex-shrink:0",
+        ].join(";");
+        declineBtn.textContent = "Decline";
+        declineBtn.onmouseover = () => { declineBtn.style.background = "rgba(255,107,107,0.14)"; };
+        declineBtn.onmouseout  = () => { declineBtn.style.background = "rgba(255,107,107,0.06)"; };
+        declineBtn.onclick = async () => {
+          await db.ref("friend_requests/" + username + "/" + fromUser).remove();
+          showToast("Declined " + fromUser);
+        };
+
+        row.appendChild(av);
+        row.appendChild(name);
+        row.appendChild(acceptBtn);
+        row.appendChild(declineBtn);
+        section.appendChild(row);
+      });
+
+      // Insert above the friends list
+      dmFriendsList.parentElement.insertBefore(section, dmFriendsList);
+    });
   }
 
   // ── Listen to friends list in Firebase (real-time) ──
@@ -794,16 +982,19 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
       const data = snap.val() || {};
       localFriendsCache = Object.keys(data);
       renderFriendsList(localFriendsCache, data);
-      // Start incoming message watchers for any new friends
       localFriendsCache.forEach(f => {
         if (!friendsWatchers[f]) watchIncoming(f);
       });
     });
+
+    // Also start listening for incoming friend requests
+    listenForFriendRequests(username);
   }
 
   function stopFriendsListener() {
     if (friendsListRef) { friendsListRef.off(); friendsListRef = null; }
     friendsListenerOn = false;
+    if (requestsListenerRef) { requestsListenerRef.off(); requestsListenerRef = null; }
     localFriendsCache = [];
     Object.values(friendsWatchers).forEach(w => w.ref.off("child_added", w.cb));
     friendsWatchers = {};
@@ -835,7 +1026,6 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
       const row = document.createElement("div");
       row.className = "dm-friend-row" + (friend === activeFriend ? " active" : "");
 
-      // Fetch avatar from Firebase if possible
       const avatarEl = buildAvatarEl(friend, "", 32);
       db.ref("users/" + friend + "/avatar").once("value").then(s => {
         const av = s.val() || "";
@@ -857,9 +1047,11 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
       name.className   = "dm-friend-name";
       name.textContent = friend === me() ? friend + " (You)" : friend;
 
+      const rawPreview = (previewData[friend] && previewData[friend].preview) || "No messages yet";
       const preview = document.createElement("div");
       preview.className   = "dm-friend-preview";
-      preview.textContent = (previewData[friend] && previewData[friend].preview) || "No messages yet";
+      // Show a nicer label if the last message was an image
+      preview.textContent = isImageUrl(rawPreview) ? "📷 Image" : rawPreview;
 
       info.appendChild(name);
       info.appendChild(preview);
@@ -892,7 +1084,6 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     activeFriend  = friend;
     activeConvoId = convoId(me(), friend);
 
-    // Detach old listeners
     if (dmMsgListenerRef && dmMsgListener) {
       dmMsgListenerRef.off("child_added", dmMsgListener);
       dmMsgListener    = null;
@@ -914,19 +1105,19 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
 
     renderFriendsList(localFriendsCache);
 
-    // Listen for messages
     const messagesRef = db.ref("dms/" + activeConvoId + "/messages");
     dmMsgListenerRef  = messagesRef;
     dmMsgListener     = messagesRef.limitToLast(60).on("child_added", snap => {
       const data = snap.val();
       appendDMMessage(data, snap.key);
-      // Update preview in Firebase
-      const previewText = (data.text || "").substring(0, 32) + ((data.text || "").length > 32 ? "…" : "");
+      // Update preview — show "📷 Image" label in Firebase too
+      const previewText = isImageUrl(data.text)
+        ? "📷 Image"
+        : (data.text || "").substring(0, 32) + ((data.text || "").length > 32 ? "…" : "");
       friendsRef(me()).child(friend).update({ preview: previewText });
       dmMessages.scrollTop = dmMessages.scrollHeight;
     });
 
-    // Listen for typing (only meaningful in two-person convos)
     if (friend !== me()) {
       dmTypingListRef  = db.ref("dm_typing/" + activeConvoId + "/" + friend);
       dmTypingListener = dmTypingListRef.on("value", snap => {
@@ -986,10 +1177,9 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     const bubble      = document.createElement("div");
     bubble.className  = "chat-bubble";
 
-    const textEl      = document.createElement("div");
-    textEl.className  = "chat-text";
-    textEl.textContent = data.text;
-    bubble.appendChild(textEl);
+    // ── Use buildMessageContent for image URL detection ──
+    const contentEl = buildMessageContent(data.text);
+    bubble.appendChild(contentEl);
 
     if (isMe) {
       const actions  = document.createElement("div");
@@ -1051,7 +1241,7 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDM(); }
   });
 
-  // ── Typing indicator (skip for self-DM) ──
+  // ── Typing indicator ──
   dmInput.addEventListener("input", () => {
     if (!activeConvoId || activeFriend === me()) return;
     const user = me();
@@ -1070,14 +1260,13 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     const user = me();
     if (!user || friendsWatchers[friend]) return;
 
-    const cid     = convoId(user, friend);
-    const ref     = db.ref("dms/" + cid + "/messages")
-                      .orderByChild("time")
-                      .startAt(Date.now() + 1);  // only future messages
+    const cid = convoId(user, friend);
+    const ref = db.ref("dms/" + cid + "/messages")
+                  .orderByChild("time")
+                  .startAt(Date.now() + 1);
 
     const cb = snap => {
       const data = snap.val();
-      // For self-DM there's no "other" sender — never badge self
       if (friend === user) return;
       if (data.sender === friend) {
         if (!isDMOpen || activeFriend !== friend) {
@@ -1106,6 +1295,8 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
     renderFriendsList([]);
     dmUnreadByUser = {};
     refreshUnreadBadge();
+    const old = document.getElementById("dm-requests-section");
+    if (old) old.remove();
   });
 
   // ── Init if already logged in ──
