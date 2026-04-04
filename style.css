@@ -793,6 +793,7 @@ h4 {
   top: 50%; transform: translateY(-50%);
   display: flex; gap: 4px;
   opacity: 0; transition: opacity 0.15s; pointer-events: none;
+  padding: 4px;
 }
 .chat-row.me    .chat-actions { right: calc(100% + 6px); }
 .chat-row.other .chat-actions { left:  calc(100% + 6px); }
