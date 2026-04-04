@@ -87,7 +87,7 @@ const newGameTrailers = [
 // =====================================
 const introOverlay = document.createElement("div");
 introOverlay.id = "intro-overlay";
-introOverlay.textContent = "🕮 NoteShelf";
+introOverlay.textContent = "NoteShelf";
 document.body.appendChild(introOverlay);
 setTimeout(() => {
   introOverlay.style.opacity = "0";
