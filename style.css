@@ -1809,3 +1809,24 @@ input[type="email"]:focus { border-color: var(--gold-dim); }
   color: var(--gold-dim);
   opacity: 0.6;
 }
+@media (max-width: 768px) {
+  #site-down-overlay > div {
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 95% !important;
+    max-width: 100% !important;
+    padding: 12px 0 !important;
+  }
+
+  #site-down-overlay > div > div {
+    min-width: unset !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 28px 20px 24px !important;
+  }
+
+  #snake-canvas {
+    width: 240px !important;
+    height: 240px !important;
+  }
+}
