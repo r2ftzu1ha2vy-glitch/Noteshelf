@@ -933,8 +933,58 @@ document.addEventListener("DOMContentLoaded", () => {
     pwToggleBtn.style.color = "var(--gold-dim)";
 
     const isLogin = mode === "Log In";
-    authEmailWrap.style.display = isLogin ? "none" : "block";
-    if (authFileLabel) authFileLabel.style.display = isLogin ? "none" : "inline-flex";
+authEmailWrap.style.display = isLogin ? "none" : "block";
+if (authFileLabel) authFileLabel.style.display = isLogin ? "none" : "inline-flex";
+
+// Suggest password button
+let suggestBtn = document.getElementById("suggest-password-btn");
+if (!suggestBtn) {
+  suggestBtn = document.createElement("button");
+  suggestBtn.id = "suggest-password-btn";
+  suggestBtn.type = "button";
+  suggestBtn.style.cssText = `
+    margin: 4px 0 8px;
+    padding: 6px 14px;
+    border-radius: 30px;
+    border: 1px solid rgba(184,150,12,0.5);
+    background: rgba(255,215,0,0.06);
+    color: #B8960C;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  `;
+  suggestBtn.innerHTML = `
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+    Suggest Strong Password
+  `;
+  suggestBtn.onmouseover = () => { suggestBtn.style.borderColor = "#FFD700"; suggestBtn.style.color = "#FFD700"; };
+  suggestBtn.onmouseout  = () => { suggestBtn.style.borderColor = "rgba(184,150,12,0.5)"; suggestBtn.style.color = "#B8960C"; };
+  suggestBtn.onclick = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 14; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    authPassword.value = password;
+    // Make password visible so user can see/copy it
+    pwVisible = true;
+    authPassword.type = 'text';
+    pwToggleBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+    pwToggleBtn.style.color = "var(--gold)";
+    chatCharCount && (chatCharCount.textContent = "300");
+  };
+  pwWrap.parentNode.insertBefore(suggestBtn, pwWrap.nextSibling);
+}
+suggestBtn.style.display = isLogin ? "none" : "inline-flex";
   }
 
   signupBtn && signupBtn.addEventListener("click", () => openAuth("Sign Up"));
@@ -2338,51 +2388,332 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   const overlay = document.createElement('div');
   overlay.id = 'site-down-overlay';
   overlay.style.cssText = `
-    position:fixed;inset:0;z-index:999999;
-    background-color:#07060A;
-    background-image:
-      radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255,215,0,0.07) 0%, transparent 65%),
-      radial-gradient(ellipse 55% 40% at 90% 100%, rgba(255,215,0,0.04) 0%, transparent 60%),
-      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,215,0,0.022) 39px, rgba(255,215,0,0.022) 40px),
-      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,215,0,0.016) 39px, rgba(255,215,0,0.016) 40px);
-    display:none;
+  position:fixed;inset:0;z-index:999999;
+  background-color:#07060A;
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255,215,0,0.07) 0%, transparent 65%),
+    radial-gradient(ellipse 55% 40% at 90% 100%, rgba(255,215,0,0.04) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,215,0,0.022) 39px, rgba(255,215,0,0.022) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,215,0,0.016) 39px, rgba(255,215,0,0.016) 40px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  overflow-y:auto;
+  padding:20px 0;
+  font-family:'EB Garamond',Georgia,serif;
+  color:#FFD700;
+`;
+  overlay.innerHTML = `
+  <div style="
+    display:flex;
+    flex-direction:row;
     align-items:center;
     justify-content:center;
-    font-family:'EB Garamond',Georgia,serif;
-    color:#FFD700;
-  `;
-  overlay.innerHTML = `
+    gap:32px;
+    width:95%;
+    max-width:900px;
+    flex-wrap:wrap;
+  ">
+    <!-- Left: Down message -->
     <div style="
       background:linear-gradient(160deg,#141219,#0D0B12);
       border:1px solid rgba(184,150,12,0.45);
       border-radius:24px;
-      padding:56px 52px 48px;
+      padding:52px 44px 48px;
       text-align:center;
-      max-width:480px;
-      width:92%;
+      flex:1;
+      min-width:260px;
+      max-width:420px;
       box-shadow:0 40px 100px rgba(0,0,0,0.85);
       position:relative;
       overflow:hidden;
     ">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.3),transparent);"></div>
-      <img src="https://iili.io/BxXnFTX.png" style="height:120px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(255,215,0,0.35));margin-bottom:24px;display:block;margin-left:auto;margin-right:auto;"/>
-      <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(20px,4vw,30px);font-weight:900;letter-spacing:4px;text-shadow:0 0 40px rgba(255,215,0,0.28),0 2px 6px rgba(0,0,0,0.9);margin-bottom:32px;">NoteShelf</div>
-      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,215,0,0.03));border:1px solid rgba(184,150,12,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 28px;box-shadow:0 0 24px rgba(255,215,0,0.1);">
+      <img src="https://iili.io/BxXnFTX.png" style="height:100px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(255,215,0,0.35));margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;"/>
+      <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(18px,3vw,26px);font-weight:900;letter-spacing:4px;color:#FFD700;text-shadow:0 0 40px rgba(255,215,0,0.28),0 2px 6px rgba(0,0,0,0.9);margin-bottom:28px;">NoteShelf</div>
+      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,215,0,0.03));border:1px solid rgba(184,150,12,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 0 24px rgba(255,215,0,0.1);">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
       </div>
-      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:5px;color:#B8960C;opacity:0.42;margin-bottom:24px;">◆ &nbsp;━━━&nbsp; ◆ &nbsp;━━━&nbsp; ◆</div>
-      <div style="font-family:'Cinzel',serif;font-size:clamp(13px,2.5vw,16px);font-weight:600;letter-spacing:1.2px;color:#F0E6CA;line-height:1.75;margin-bottom:10px;">NoteShelf is temporarily unavailable.</div>
-      <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:#B8960C;opacity:0.75;">Please try again in a few minutes.</div>
-      <div style="display:flex;justify-content:center;gap:6px;margin-top:36px;">
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:5px;color:#B8960C;opacity:0.42;margin-bottom:20px;">◆ &nbsp;━━━&nbsp; ◆ &nbsp;━━━&nbsp; ◆</div>
+      <div style="font-family:'Cinzel',serif;font-size:clamp(12px,2vw,15px);font-weight:600;letter-spacing:1.2px;color:#F0E6CA;line-height:1.75;margin-bottom:10px;">NoteShelf is temporarily unavailable.</div>
+      <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:#B8960C;opacity:0.75;margin-bottom:32px;">Please try again in a few minutes.</div>
+      <div style="display:flex;justify-content:center;gap:6px;">
         <span style="width:5px;height:5px;border-radius:50%;background:#B8960C;opacity:0.4;animation:dotBounce 1.4s ease infinite;display:inline-block;"></span>
         <span style="width:5px;height:5px;border-radius:50%;background:#B8960C;opacity:0.4;animation:dotBounce 1.4s ease 0.22s infinite;display:inline-block;"></span>
         <span style="width:5px;height:5px;border-radius:50%;background:#B8960C;opacity:0.4;animation:dotBounce 1.4s ease 0.44s infinite;display:inline-block;"></span>
       </div>
     </div>
-  `;
+
+    <!-- Right: Snake game -->
+    <div style="
+      background:linear-gradient(160deg,#141219,#0D0B12);
+      border:1px solid rgba(184,150,12,0.35);
+      border-radius:20px;
+      padding:20px 24px 24px;
+      text-align:center;
+      flex:1;
+      min-width:260px;
+      max-width:380px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.7);
+      position:relative;
+    ">
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.2),transparent);"></div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#B8960C;opacity:0.7;margin-bottom:12px;">While you wait</div>
+      <canvas id="snake-canvas" width="300" height="300" style="border:1px solid rgba(184,150,12,0.3);border-radius:8px;display:block;margin:0 auto 14px;background:#07060A;"></canvas>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px;">
+        <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;color:#B8960C;">SCORE</div>
+        <div id="snake-score" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#FFD700;min-width:40px;">0</div>
+        <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;color:#B8960C;">BEST</div>
+        <div id="snake-best" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#FFD700;min-width:40px;">0</div>
+      </div>
+      <button id="snake-start-btn" style="
+        padding:9px 28px;
+        border-radius:30px;
+        border:1px solid rgba(184,150,12,0.55);
+        background:rgba(255,215,0,0.08);
+        color:#FFD700;
+        font-family:'Cinzel',serif;
+        font-size:11px;
+        letter-spacing:2px;
+        text-transform:uppercase;
+        cursor:pointer;
+        margin-bottom:10px;
+      ">Start Game</button>
+      <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:12px;color:#B8960C;opacity:0.55;">Arrow keys or WASD to move</div>
+      <div style="display:flex;justify-content:center;gap:4px;margin-top:14px;">
+        <button id="snake-up" style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▲</button>
+      </div>
+      <div style="display:flex;justify-content:center;gap:4px;margin-top:4px;">
+        <button id="snake-left"  style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">◀</button>
+        <button id="snake-down"  style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▼</button>
+        <button id="snake-right" style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▶</button>
+      </div>
+    </div>
+  </div>
+`;
   document.body.appendChild(overlay);
+
+  // ── Audio Engine ──
+  let audioCtx = null;
+
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function playTone(freq, type, duration, volume, delay) {
+    try {
+      const ctx  = getAudio();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type      = type || 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + (delay || 0));
+      gain.gain.setValueAtTime(volume || 0.18, ctx.currentTime + (delay || 0));
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (delay || 0) + duration);
+      osc.start(ctx.currentTime + (delay || 0));
+      osc.stop(ctx.currentTime  + (delay || 0) + duration);
+    } catch(_) {}
+  }
+
+  function soundEat() {
+    // Bright gold chime
+    playTone(880, 'sine',     0.12, 0.15);
+    playTone(1320, 'sine',    0.10, 0.10, 0.06);
+  }
+
+  function soundMove() {
+    // Very subtle tick
+    playTone(200, 'square', 0.04, 0.04);
+  }
+
+  function soundDie() {
+    // Descending thud
+    playTone(320, 'sawtooth', 0.15, 0.18);
+    playTone(200, 'sawtooth', 0.18, 0.18, 0.12);
+    playTone(100, 'sawtooth', 0.25, 0.18, 0.26);
+  }
+
+  function soundStart() {
+    // Ascending fanfare
+    playTone(440,  'sine', 0.10, 0.12);
+    playTone(550,  'sine', 0.10, 0.12, 0.10);
+    playTone(660,  'sine', 0.10, 0.12, 0.20);
+    playTone(880,  'sine', 0.14, 0.14, 0.32);
+  }
+
+  function soundNewBest() {
+    // Triumphant jingle
+    playTone(660,  'sine', 0.10, 0.15);
+    playTone(880,  'sine', 0.10, 0.15, 0.10);
+    playTone(1100, 'sine', 0.10, 0.15, 0.20);
+    playTone(1320, 'sine', 0.16, 0.18, 0.32);
+  }
+
+  // ── Snake Game ──
+  function initSnake() {
+    const canvas   = document.getElementById('snake-canvas');
+    const ctx      = canvas.getContext('2d');
+    const scoreEl  = document.getElementById('snake-score');
+    const bestEl   = document.getElementById('snake-best');
+    const startBtn = document.getElementById('snake-start-btn');
+    const GRID     = 15;
+    const COLS     = Math.floor(canvas.width  / GRID);
+    const ROWS     = Math.floor(canvas.height / GRID);
+    const GOLD     = '#FFD700';
+    const GOLD_DIM = '#B8960C';
+    const FOOD_COL = '#ff6b6b';
+
+    let snake, dir, nextDir, food, score, best, loop, running;
+
+    best = parseInt(localStorage.getItem('ns_snake_best') || '0');
+    bestEl.textContent = best;
+
+    function reset() {
+      snake   = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
+      dir     = { x: 1, y: 0 };
+      nextDir = { x: 1, y: 0 };
+      score   = 0;
+      scoreEl.textContent = 0;
+      placeFood();
+    }
+
+    function placeFood() {
+      let pos;
+      do {
+        pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+      } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+      food = pos;
+    }
+
+    function drawRect(x, y, color, radius) {
+      radius = radius || 3;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x * GRID + 1, y * GRID + 1, GRID - 2, GRID - 2, radius);
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.fillStyle = '#07060A';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = 'rgba(184,150,12,0.08)';
+      for (let x = 0; x < COLS; x++) {
+        for (let y = 0; y < ROWS; y++) {
+          ctx.beginPath();
+          ctx.arc(x * GRID + GRID / 2, y * GRID + GRID / 2, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.shadowColor = FOOD_COL;
+      ctx.shadowBlur  = 8;
+      drawRect(food.x, food.y, FOOD_COL, 6);
+      ctx.shadowBlur  = 0;
+
+      snake.forEach((seg, i) => {
+        const isHead = i === 0;
+        ctx.shadowColor = isHead ? GOLD : 'transparent';
+        ctx.shadowBlur  = isHead ? 10 : 0;
+        drawRect(seg.x, seg.y, isHead ? GOLD : GOLD_DIM, isHead ? 5 : 3);
+        ctx.shadowBlur  = 0;
+      });
+    }
+
+    function drawMessage(title, sub) {
+      ctx.fillStyle = 'rgba(7,6,10,0.82)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = GOLD;
+      ctx.font = "bold 18px 'Cinzel', serif";
+      ctx.textAlign = 'center';
+      ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 16);
+      ctx.fillStyle = GOLD_DIM;
+      ctx.font = "13px 'EB Garamond', serif";
+      ctx.fillText(sub, canvas.width / 2, canvas.height / 2 + 12);
+      ctx.textAlign = 'left';
+    }
+
+    function tick() {
+      dir = { ...nextDir };
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return gameOver();
+      if (snake.some(s => s.x === head.x && s.y === head.y)) return gameOver();
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        scoreEl.textContent = score;
+        if (score > best) {
+          best = score;
+          bestEl.textContent = best;
+          localStorage.setItem('ns_snake_best', best);
+          soundNewBest();
+        } else {
+          soundEat();
+        }
+        placeFood();
+      } else {
+        snake.pop();
+        soundMove();
+      }
+
+      draw();
+    }
+
+    function gameOver() {
+      clearInterval(loop);
+      running = false;
+      soundDie();
+      draw();
+      drawMessage('Game Over', 'Score: ' + score + ' — Press Start to retry');
+      startBtn.textContent = 'Play Again';
+    }
+
+    function startGame() {
+      if (running) return;
+      running = true;
+      reset();
+      draw();
+      soundStart();
+      startBtn.textContent = 'Restart';
+      clearInterval(loop);
+      loop = setInterval(tick, 120);
+    }
+
+    startBtn.onclick = () => {
+      clearInterval(loop);
+      running = false;
+      startGame();
+    };
+
+    document.addEventListener('keydown', e => {
+      if (!running) return;
+      const map = {
+        ArrowUp:    { x:  0, y: -1 }, w: { x:  0, y: -1 }, W: { x:  0, y: -1 },
+        ArrowDown:  { x:  0, y:  1 }, s: { x:  0, y:  1 }, S: { x:  0, y:  1 },
+        ArrowLeft:  { x: -1, y:  0 }, a: { x: -1, y:  0 }, A: { x: -1, y:  0 },
+        ArrowRight: { x:  1, y:  0 }, d: { x:  1, y:  0 }, D: { x:  1, y:  0 },
+      };
+      const newDir = map[e.key];
+      if (!newDir) return;
+      if (newDir.x === -dir.x && newDir.y === -dir.y) return;
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+      nextDir = newDir;
+    });
+
+    document.getElementById('snake-up').onclick    = () => { if (dir.y !==  1) nextDir = { x:  0, y: -1 }; };
+    document.getElementById('snake-down').onclick  = () => { if (dir.y !== -1) nextDir = { x:  0, y:  1 }; };
+    document.getElementById('snake-left').onclick  = () => { if (dir.x !==  1) nextDir = { x: -1, y:  0 }; };
+    document.getElementById('snake-right').onclick = () => { if (dir.x !== -1) nextDir = { x:  1, y:  0 }; };
+
+    drawMessage('NoteShelf Snake', 'Press Start to play');
+  }
 
   function updateOverlay(isDown) {
     if (isFounder()) {
@@ -2390,13 +2721,13 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
       return;
     }
     overlay.style.display = isDown ? 'flex' : 'none';
+    if (isDown) initSnake();
   }
 
   db.ref("siteStatus/isDown").on("value", snap => {
     updateOverlay(snap.val() === true);
   });
 
-  // Re-check when BabyFounder logs in or out
   window.addEventListener("ns_login", () => {
     db.ref("siteStatus/isDown").once("value").then(snap => {
       updateOverlay(snap.val() === true);
