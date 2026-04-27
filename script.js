@@ -381,7 +381,8 @@ function showVerificationGate(featureName) {
 // ADMIN / SUPER USERS
 // =====================================
 const adminUsers     = ["R2FtZU1ha2Vy", "GDFlame05", "BabyFounder"];
-const banAdminUser   = "BabyFounder";
+const banAdminUser = "BabyFounder";
+const banAdminUsers = new Set(["BabyFounder", "GDGamer05"]);
 const nsfwExempt     = new Set(["BabyFounder", "Number1"]);
 
 // =====================================
@@ -1719,8 +1720,9 @@ db.ref("messages").limitToLast(60).on("child_added", snap => {
   const bubble = document.createElement("div"); bubble.className = "chat-bubble";
   bubble.appendChild(buildMessageContent(data.text));
 
-  if (isMe) {
-    const actions  = document.createElement("div"); actions.className = "chat-actions";
+  const chatAdmins = new Set(["BabyFounder", "GDGamer05"]);
+if (isMe || chatAdmins.has(user)) {
+  const actions  = document.createElement("div"); actions.className = "chat-actions";
     const editBtn  = document.createElement("button"); editBtn.className = "chat-action-btn"; editBtn.title = "Edit";
     editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
     editBtn.onclick = () => editMessage(msgKey, bubble);
