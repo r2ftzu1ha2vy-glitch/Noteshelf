@@ -1295,7 +1295,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const reason   = document.getElementById("ban-reason-input").value.trim() || "No reason provided";
       const duration = document.getElementById("ban-duration-select").value;
       if (!target) { showBanFeedback("❌ Enter a username", "#ff6b6b"); return; }
-      if (target === banAdminUser) { showBanFeedback("❌ Cannot ban the admin", "#ff6b6b"); return; }
+      if (target === "BabyFounder" || adminUsers.includes(target)) { showBanFeedback("❌ Cannot ban the owner", "#ff6b6b"); return; }
       const userSnap = await db.ref("users/" + target).once("value");
       if (!userSnap.exists()) { showBanFeedback("❌ User not found", "#ff6b6b"); return; }
       const durationMap = { "1h":3600000,"6h":21600000,"12h":43200000,"24h":86400000,"3d":259200000,"7d":604800000,"30d":2592000000 };
