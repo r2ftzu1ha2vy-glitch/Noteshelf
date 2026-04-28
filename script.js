@@ -127,7 +127,6 @@ firebase.initializeApp(firebaseConfig);
 const db   = firebase.database();
 const auth = firebase.auth();
 
-// FIX: Persist auth session in localStorage so token refresh doesn't kick users out
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 const actionCodeSettings = {
@@ -380,10 +379,11 @@ function showVerificationGate(featureName) {
 // =====================================
 // ADMIN / SUPER USERS
 // =====================================
-const adminUsers     = ["R2FtZU1ha2Vy", "GDFlame05", "BabyFounder"];
+const adminUsers   = ["R2FtZU1ha2Vy", "GDFlame05", "BabyFounder"];
 const banAdminUser = "BabyFounder";
 const banAdminUsers = new Set(["BabyFounder", "GDGamer05"]);
-const nsfwExempt     = new Set(["BabyFounder", "Number1"]);
+const chatAdmins  = new Set(["BabyFounder", "GDGamer05"]);
+const nsfwExempt  = new Set(["BabyFounder", "Number1"]);
 
 // =====================================
 // PROFANITY FILTER
@@ -595,14 +595,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const authFileLabel   = document.querySelector(".auth-file-label");
   const globalMsgPopup  = document.getElementById("global-message-popup");
 
-  // Expose for feature pack
   window.__ns_games        = games;
   window.__ns_mobileGames  = mobileGames;
   window.__ns_desktopGames = desktopGames;
   window.__ns_createGameButton = createGameButton;
   window.__ns_loadGame     = loadGameInViewer;
 
-  // Email field
   const authEmailWrap = document.createElement("div");
   authEmailWrap.id = "auth-email-wrap";
   const authEmail = document.createElement("input");
@@ -615,7 +613,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const authBox = document.getElementById("auth-box");
   authBox.insertBefore(authEmailWrap, authUsername);
 
-  // Password toggle
   const pwToggleBtn = document.createElement("button");
   pwToggleBtn.type  = "button";
   pwToggleBtn.id    = "pw-toggle";
@@ -640,14 +637,12 @@ document.addEventListener("DOMContentLoaded", () => {
     pwToggleBtn.style.color = pwVisible ? "var(--gold)" : "var(--gold-dim)";
   });
 
-  // Compat icons
   const mobileSVG  = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`;
   const desktopSVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>`;
 
   let currentGameUrl  = "";
   let currentGameName = "";
 
-  // Game viewer
   const gameViewer = document.createElement("div");
   gameViewer.id = "game-viewer";
   gameViewer.innerHTML = `
@@ -721,8 +716,7 @@ document.addEventListener("DOMContentLoaded", () => {
           position:absolute;top:50%;right:8px;transform:translateY(-50%);
           width:22px;height:22px;border-radius:50%;
           background:rgba(255,215,0,0.1);border:1px solid rgba(184,150,12,0.5);
-          display:flex;align-items:center;justify-content:center;
-          flex-shrink:0;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;
         `;
         lockEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B8960C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
         btn.appendChild(lockEl);
@@ -734,11 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function loadGameInViewer(game) {
-    if (!me() && !freeGames.has(game.name)) {
-      showLoginGate();
-      return;
-    }
-
+    if (!me() && !freeGames.has(game.name)) { showLoginGate(); return; }
     currentGameUrl  = game.url;
     currentGameName = game.name;
     gameViewerTitle.textContent = game.name;
@@ -773,11 +763,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape" && gameViewer.style.display === "flex") closeViewer();
   });
 
-  // Game card
   function createGameButton(game) {
     const user   = me();
     const locked = !user && !freeGames.has(game.name);
-
     const btn   = document.createElement("button");
     btn.className = "game-button";
     const img   = document.createElement("img"); img.src = game.image || defaultImg; img.alt = game.name;
@@ -787,25 +775,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (locked) {
       const lockOverlay = document.createElement("div");
       lockOverlay.className = "game-lock-overlay";
-      lockOverlay.innerHTML = `
-        <div class="game-lock-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-        </div>
-      `;
+      lockOverlay.innerHTML = `<div class="game-lock-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>`;
       btn.appendChild(lockOverlay);
       btn.classList.add("game-locked");
     }
 
-    btn.onclick = () => {
-      if (locked) {
-        showLoginGate();
-        return;
-      }
-      loadGameInViewer(game);
-    };
+    btn.onclick = () => { if (locked) { showLoginGate(); return; } loadGameInViewer(game); };
 
     const isMobile  = mobileGames.has(game.name);
     const isDesktop = desktopGames.has(game.name);
@@ -833,10 +808,7 @@ document.addEventListener("DOMContentLoaded", () => {
           tooltip.classList.add("visible");
         }, 3000);
       });
-      btn.addEventListener("mouseleave", () => {
-        clearTimeout(hoverTimer);
-        tooltip.classList.remove("visible");
-      });
+      btn.addEventListener("mouseleave", () => { clearTimeout(hoverTimer); tooltip.classList.remove("visible"); });
     }
     return btn;
   }
@@ -864,7 +836,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   searchBar && searchBar.addEventListener("input", e => renderGames(e.target.value));
 
-  // Category sidebar
   const categories = ["All Games","Horror","Puzzle","Racing","Action","Rpg","Sports","Chill","Timing","Defense","Reflex","Annoying"];
   let activeBtn = null;
 
@@ -890,7 +861,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   renderGames();
 
-  // Trailers
   const trailerBtnEl = document.getElementById("trailer-btn");
   if (trailerBtnEl) {
     trailerBtnEl.addEventListener("click", () => {
@@ -934,58 +904,31 @@ document.addEventListener("DOMContentLoaded", () => {
     pwToggleBtn.style.color = "var(--gold-dim)";
 
     const isLogin = mode === "Log In";
-authEmailWrap.style.display = isLogin ? "none" : "block";
-if (authFileLabel) authFileLabel.style.display = isLogin ? "none" : "inline-flex";
+    authEmailWrap.style.display = isLogin ? "none" : "block";
+    if (authFileLabel) authFileLabel.style.display = isLogin ? "none" : "inline-flex";
 
-// Suggest password button
-let suggestBtn = document.getElementById("suggest-password-btn");
-if (!suggestBtn) {
-  suggestBtn = document.createElement("button");
-  suggestBtn.id = "suggest-password-btn";
-  suggestBtn.type = "button";
-  suggestBtn.style.cssText = `
-    margin: 4px 0 8px;
-    padding: 6px 14px;
-    border-radius: 30px;
-    border: 1px solid rgba(184,150,12,0.5);
-    background: rgba(255,215,0,0.06);
-    color: #B8960C;
-    font-family: 'Cinzel', serif;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.2s;
-  `;
-  suggestBtn.innerHTML = `
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </svg>
-    Suggest Strong Password
-  `;
-  suggestBtn.onmouseover = () => { suggestBtn.style.borderColor = "#FFD700"; suggestBtn.style.color = "#FFD700"; };
-  suggestBtn.onmouseout  = () => { suggestBtn.style.borderColor = "rgba(184,150,12,0.5)"; suggestBtn.style.color = "#B8960C"; };
-  suggestBtn.onclick = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < 14; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    let suggestBtn = document.getElementById("suggest-password-btn");
+    if (!suggestBtn) {
+      suggestBtn = document.createElement("button");
+      suggestBtn.id = "suggest-password-btn";
+      suggestBtn.type = "button";
+      suggestBtn.style.cssText = `margin:4px 0 8px;padding:6px 14px;border-radius:30px;border:1px solid rgba(184,150,12,0.5);background:rgba(255,215,0,0.06);color:#B8960C;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;`;
+      suggestBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Suggest Strong Password`;
+      suggestBtn.onmouseover = () => { suggestBtn.style.borderColor = "#FFD700"; suggestBtn.style.color = "#FFD700"; };
+      suggestBtn.onmouseout  = () => { suggestBtn.style.borderColor = "rgba(184,150,12,0.5)"; suggestBtn.style.color = "#B8960C"; };
+      suggestBtn.onclick = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < 14; i++) password += chars.charAt(Math.floor(Math.random() * chars.length));
+        authPassword.value = password;
+        pwVisible = true;
+        authPassword.type = 'text';
+        pwToggleBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+        pwToggleBtn.style.color = "var(--gold)";
+      };
+      pwWrap.parentNode.insertBefore(suggestBtn, pwWrap.nextSibling);
     }
-    authPassword.value = password;
-    // Make password visible so user can see/copy it
-    pwVisible = true;
-    authPassword.type = 'text';
-    pwToggleBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
-    pwToggleBtn.style.color = "var(--gold)";
-    chatCharCount && (chatCharCount.textContent = "300");
-  };
-  pwWrap.parentNode.insertBefore(suggestBtn, pwWrap.nextSibling);
-}
-suggestBtn.style.display = isLogin ? "none" : "inline-flex";
+    suggestBtn.style.display = isLogin ? "none" : "inline-flex";
   }
 
   signupBtn && signupBtn.addEventListener("click", () => openAuth("Sign Up"));
@@ -1004,7 +947,6 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
     return h.toString(36);
   }
 
-  // Auth submit
   authSubmit && authSubmit.addEventListener("click", async () => {
     const username = authUsername.value.trim();
     const password = authPassword.value.trim();
@@ -1017,25 +959,21 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
     const snap     = await userRef.once("value");
     const userData = snap.val();
 
-    // SIGN UP
     if (authTitle.textContent === "Sign Up") {
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         authMessage.textContent = "❌ Valid email address is required"; return;
       }
       if (userData) { authMessage.textContent = "❌ Username already taken"; return; }
-
       authMessage.textContent = "⏳ Creating account…";
       authSubmit.disabled = true;
-
       try {
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         const fbUser = cred.user;
         await fbUser.sendEmailVerification();
-
         const newUser = {
           passwordHash:  simpleHash(password),
           isAdmin:       adminUsers.includes(username),
-          isBanAdmin:    username === banAdminUser,
+          isBanAdmin:    banAdminUsers.has(username),
           avatar:        pendingAvatarB64,
           createdAt:     Date.now(),
           email:         email,
@@ -1043,15 +981,12 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
           emailVerified: false,
         };
         await userRef.set(newUser);
-
         authPopup.style.display = "none";
         authSubmit.disabled = false;
-
         setSession(username, pendingAvatarB64, false, fbUser.uid);
         updateUIAfterLogin(username, pendingAvatarB64, newUser.isAdmin, newUser.isBanAdmin);
         showVerificationBanner();
         showVerifyToast("✉ Verification email sent to " + email);
-
       } catch (err) {
         authSubmit.disabled = false;
         authMessage.textContent = "❌ " + (err.message || "Sign up failed");
@@ -1059,51 +994,38 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
       return;
     }
 
-    // LOG IN
     if (authTitle.textContent === "Log In") {
       if (!userData) { authMessage.textContent = "❌ Username does not exist"; return; }
       if (userData.passwordHash !== simpleHash(password)) { authMessage.textContent = "❌ Wrong password"; return; }
-
       const ban = await checkBanned(username);
       if (ban) { authPopup.style.display = "none"; showBanPopup(ban); return; }
-
       authMessage.textContent = "⏳ Signing in…";
       authSubmit.disabled = true;
-
       try {
         const storedEmail = userData.email || "";
         let fbVerified = userData.emailVerified || false;
-
         if (storedEmail) {
           const cred = await auth.signInWithEmailAndPassword(storedEmail, password);
           await cred.user.reload();
           fbVerified = cred.user.emailVerified;
-
           if (fbVerified && !userData.emailVerified) {
             await db.ref("users/" + username + "/emailVerified").set(true);
           }
-
           setSession(username, userData.avatar || "", fbVerified, cred.user.uid);
         } else {
           setSession(username, userData.avatar || "", false, null);
         }
-
         authPopup.style.display = "none";
         authSubmit.disabled = false;
-
-        updateUIAfterLogin(username, userData.avatar || "", userData.isAdmin, userData.isBanAdmin || username === banAdminUser);
-
-        if (!fbVerified) {
-          showVerificationBanner();
-        }
-
+        updateUIAfterLogin(username, userData.avatar || "", userData.isAdmin, userData.isBanAdmin || banAdminUsers.has(username));
+        if (!fbVerified) showVerificationBanner();
       } catch (err) {
         authSubmit.disabled = false;
         if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
           authMessage.textContent = "";
           setSession(username, userData.avatar || "", false, null);
           authPopup.style.display = "none";
-          updateUIAfterLogin(username, userData.avatar || "", userData.isAdmin, userData.isBanAdmin || username === banAdminUser);
+          updateUIAfterLogin(username, userData.avatar || "", userData.isAdmin, userData.isBanAdmin || banAdminUsers.has(username));
         } else {
           authMessage.textContent = "❌ " + (err.message || "Login failed");
         }
@@ -1114,139 +1036,51 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
   function showLoginGate() {
     const old = document.getElementById("login-gate-overlay");
     if (old) old.remove();
-
     const overlay = document.createElement("div");
     overlay.id = "login-gate-overlay";
-    overlay.style.cssText = `
-      position:fixed;inset:0;background:rgba(5,4,10,0.92);
-      backdrop-filter:blur(10px);z-index:99999;
-      display:flex;align-items:center;justify-content:center;
-      animation:lgFadeIn 0.25s cubic-bezier(0.4,0,0.2,1);
-    `;
-
+    overlay.style.cssText = `position:fixed;inset:0;background:rgba(5,4,10,0.92);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:lgFadeIn 0.25s cubic-bezier(0.4,0,0.2,1);`;
     overlay.innerHTML = `
       <style>
         @keyframes lgFadeIn { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
         @keyframes lgShimmer { 0%,100%{opacity:0.6} 50%{opacity:1} }
-        #lg-box {
-          background:linear-gradient(160deg,#141219,#0D0B12);
-          border:1px solid rgba(184,150,12,0.5);
-          border-radius:24px;padding:52px 44px 44px;
-          max-width:440px;width:90%;text-align:center;
-          position:relative;
-          box-shadow:0 0 80px rgba(255,215,0,0.07),0 32px 80px rgba(0,0,0,0.9);
-        }
-        #lg-box::before {
-          content:'';position:absolute;inset:0;
-          background:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(255,215,0,0.06) 0%,transparent 70%);
-          border-radius:24px;pointer-events:none;
-        }
-        #lg-close {
-          position:absolute;top:14px;right:14px;width:32px;height:32px;
-          border-radius:50%;border:1px solid rgba(184,150,12,0.3);
-          background:transparent;color:#B8960C;cursor:pointer;font-size:16px;
-          display:flex;align-items:center;justify-content:center;transition:all 0.2s;
-        }
+        #lg-box { background:linear-gradient(160deg,#141219,#0D0B12);border:1px solid rgba(184,150,12,0.5);border-radius:24px;padding:52px 44px 44px;max-width:440px;width:90%;text-align:center;position:relative;box-shadow:0 0 80px rgba(255,215,0,0.07),0 32px 80px rgba(0,0,0,0.9); }
+        #lg-close { position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid rgba(184,150,12,0.3);background:transparent;color:#B8960C;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.2s; }
         #lg-close:hover { border-color:#FFD700;color:#FFD700;background:rgba(255,215,0,0.06); }
-        .lg-lock-ring {
-          width:80px;height:80px;border-radius:50%;
-          background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,215,0,0.04));
-          border:1px solid rgba(184,150,12,0.5);
-          display:flex;align-items:center;justify-content:center;
-          margin:0 auto 24px;
-          animation:lgShimmer 2.4s ease infinite;
-          box-shadow:0 0 30px rgba(255,215,0,0.08);
-        }
-        .lg-eyebrow {
-          font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;
-          text-transform:uppercase;color:#B8960C;margin-bottom:10px;opacity:0.8;
-        }
-        .lg-title {
-          font-family:'Cinzel Decorative',serif;font-size:22px;font-weight:700;
-          color:#FFD700;letter-spacing:1px;margin-bottom:14px;line-height:1.3;
-          text-shadow:0 0 40px rgba(255,215,0,0.3);
-        }
-        .lg-body {
-          font-family:'EB Garamond',serif;font-size:16px;color:#F0E6CA;
-          line-height:1.75;margin-bottom:32px;opacity:0.85;
-        }
+        .lg-lock-ring { width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,215,0,0.04));border:1px solid rgba(184,150,12,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;animation:lgShimmer 2.4s ease infinite;box-shadow:0 0 30px rgba(255,215,0,0.08); }
+        .lg-eyebrow { font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#B8960C;margin-bottom:10px;opacity:0.8; }
+        .lg-title { font-family:'Cinzel Decorative',serif;font-size:22px;font-weight:700;color:#FFD700;letter-spacing:1px;margin-bottom:14px;line-height:1.3;text-shadow:0 0 40px rgba(255,215,0,0.3); }
+        .lg-body { font-family:'EB Garamond',serif;font-size:16px;color:#F0E6CA;line-height:1.75;margin-bottom:32px;opacity:0.85; }
         .lg-body strong { color:#FFD700;font-style:italic; }
         .lg-buttons { display:flex;gap:12px;flex-direction:column; }
-        .lg-btn-signup {
-          width:100%;padding:14px;
-          background:linear-gradient(135deg,#FFD700,#D4A017);
-          border:none;border-radius:30px;color:#07060A;
-          font-family:'Cinzel',serif;font-weight:700;font-size:12px;
-          letter-spacing:3px;text-transform:uppercase;
-          cursor:pointer;transition:all 0.25s;
-          box-shadow:0 4px 20px rgba(255,215,0,0.2);
-          display:flex;align-items:center;justify-content:center;gap:8px;
-        }
+        .lg-btn-signup { width:100%;padding:14px;background:linear-gradient(135deg,#FFD700,#D4A017);border:none;border-radius:30px;color:#07060A;font-family:'Cinzel',serif;font-weight:700;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 20px rgba(255,215,0,0.2);display:flex;align-items:center;justify-content:center;gap:8px; }
         .lg-btn-signup:hover { box-shadow:0 0 32px rgba(255,215,0,0.4);transform:translateY(-2px); }
-        .lg-btn-login {
-          width:100%;padding:13px;
-          background:transparent;
-          border:1px solid rgba(184,150,12,0.5);
-          border-radius:30px;color:#FFD700;
-          font-family:'Cinzel',serif;font-size:12px;
-          letter-spacing:3px;text-transform:uppercase;
-          cursor:pointer;transition:all 0.25s;
-          display:flex;align-items:center;justify-content:center;gap:8px;
-        }
+        .lg-btn-login { width:100%;padding:13px;background:transparent;border:1px solid rgba(184,150,12,0.5);border-radius:30px;color:#FFD700;font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:all 0.25s;display:flex;align-items:center;justify-content:center;gap:8px; }
         .lg-btn-login:hover { border-color:#FFD700;background:rgba(255,215,0,0.06);transform:translateY(-1px); }
-        .lg-free-note {
-          margin-top:20px;
-          font-family:'EB Garamond',serif;font-style:italic;
-          font-size:13px;color:rgba(184,150,12,0.5);
-          letter-spacing:0.3px;
-        }
+        .lg-free-note { margin-top:20px;font-family:'EB Garamond',serif;font-style:italic;font-size:13px;color:rgba(184,150,12,0.5); }
       </style>
       <div id="lg-box">
-        <button id="lg-close">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <div class="lg-lock-ring">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-        </div>
+        <button id="lg-close"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <div class="lg-lock-ring"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
         <div class="lg-eyebrow">Members Only</div>
         <h2 class="lg-title">Unlock the Full Library</h2>
         <p class="lg-body">Create a <strong>free account</strong> to access every game in the NoteShelf collection — no subscription required.</p>
         <div class="lg-buttons">
-          <button class="lg-btn-signup" id="lg-signup-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-            Create Free Account
-          </button>
-          <button class="lg-btn-login" id="lg-login-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            Log In
-          </button>
+          <button class="lg-btn-signup" id="lg-signup-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>Create Free Account</button>
+          <button class="lg-btn-login" id="lg-login-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Log In</button>
         </div>
         <p class="lg-free-note">5 games are free to play without an account.</p>
       </div>
     `;
-
     document.body.appendChild(overlay);
-
     document.getElementById("lg-close").onclick = () => overlay.remove();
     overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
     document.addEventListener("keydown", function esc(e) {
       if (e.key === "Escape") { overlay.remove(); document.removeEventListener("keydown", esc); }
     });
-
-    document.getElementById("lg-signup-btn").onclick = () => {
-      overlay.remove();
-      document.getElementById("signup-btn").click();
-    };
-    document.getElementById("lg-login-btn").onclick = () => {
-      overlay.remove();
-      document.getElementById("login-btn").click();
-    };
+    document.getElementById("lg-signup-btn").onclick = () => { overlay.remove(); document.getElementById("signup-btn").click(); };
+    document.getElementById("lg-login-btn").onclick = () => { overlay.remove(); document.getElementById("login-btn").click(); };
   }
 
-  // Update UI after login
   function updateUIAfterLogin(username, avatar, isAdmin, isBanAdmin) {
     logoutBtn.style.display       = "inline-flex";
     usernameDisplay.style.display = "inline-block";
@@ -1260,11 +1094,9 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
       userAvatar.style.display = "none";
     }
 
-    // Edit profile button
     const epBtn = document.getElementById("edit-profile-btn");
     if (epBtn) epBtn.style.display = "inline-flex";
 
-    // Verified badge
     let badge = document.getElementById("verified-badge");
     if (!badge) {
       badge = document.createElement("span");
@@ -1277,10 +1109,8 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
 
     adminPanel.style.display = isAdmin ? "block" : "none";
 
-    if (isBanAdmin || username === banAdminUser) {
+    if (isBanAdmin || banAdminUsers.has(username)) {
       buildBanAdminPanel();
-
-      // FIX: Add Ban Manager toggle button
       let banToggleBtn = document.getElementById("ban-manager-toggle-btn");
       if (!banToggleBtn) {
         banToggleBtn = document.createElement("button");
@@ -1296,9 +1126,7 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
     }
 
     renderGames(searchBar ? searchBar.value : "");
-    if (gameViewer.style.display === "flex" && currentGameName) {
-      buildViewerSidebar(currentGameName);
-    }
+    if (gameViewer.style.display === "flex" && currentGameName) buildViewerSidebar(currentGameName);
     window.dispatchEvent(new CustomEvent("ns_login", { detail: { username, avatar } }));
   }
 
@@ -1310,28 +1138,19 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
     signupBtn.style.display = loginBtn.style.display = "inline-flex";
     adminPanel.style.display = "none";
     removeVerificationBanner();
-
     const epBtn = document.getElementById("edit-profile-btn");
     if (epBtn) epBtn.style.display = "none";
-
     const badge = document.getElementById("verified-badge");
     if (badge) badge.remove();
-
     const banPanel = document.getElementById("ban-admin-panel");
     if (banPanel) banPanel.style.display = "none";
-
-    // FIX: Remove ban manager toggle button on logout
     const banToggle = document.getElementById("ban-manager-toggle-btn");
     if (banToggle) banToggle.remove();
-
     window.dispatchEvent(new CustomEvent("ns_logout"));
     renderGames(searchBar ? searchBar.value : "");
-    if (gameViewer.style.display === "flex" && currentGameName) {
-      buildViewerSidebar(currentGameName);
-    }
+    if (gameViewer.style.display === "flex" && currentGameName) buildViewerSidebar(currentGameName);
   });
 
-  // Global message
   function triggerGlobalMessage(message) {
     if (!globalMsgPopup) return;
     globalMsgPopup.textContent = message;
@@ -1352,17 +1171,14 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
   const closeAdminBtn = document.getElementById("close-admin");
   closeAdminBtn && closeAdminBtn.addEventListener("click", () => { adminPanel.style.display = "none"; });
 
-  // Restore session
   if (me()) {
     db.ref("users/" + me()).once("value").then(async snap => {
       const data = snap.val();
       if (data) {
         const ban = await checkBanned(me());
         if (ban) { clearSession(); showBanPopup(ban); return; }
-
         const currentFbUser = auth.currentUser;
         let verified = data.emailVerified || false;
-
         if (currentFbUser) {
           try {
             await currentFbUser.reload();
@@ -1372,19 +1188,15 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
             }
           } catch (_) {}
         }
-
         setSession(me(), data.avatar || "", verified, currentFbUser ? currentFbUser.uid : _firebaseUid);
-        updateUIAfterLogin(me(), data.avatar || "", data.isAdmin, data.isBanAdmin || me() === banAdminUser);
-
+        updateUIAfterLogin(me(), data.avatar || "", data.isAdmin, data.isBanAdmin || banAdminUsers.has(me()));
         if (!_emailVerified) showVerificationBanner();
-
       } else {
         clearSession();
       }
     });
   }
 
-  // FIX: Firebase Auth state listener — only act on verified state changes, never clear session on null
   auth.onAuthStateChanged(async fbUser => {
     if (fbUser && me()) {
       try {
@@ -1399,9 +1211,6 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
         }
       } catch(_) {}
     }
-    // NOTE: We intentionally do NOT clear the session when fbUser is null.
-    // Firebase fires null during token refresh, which would incorrectly log users out.
-    // Users are only logged out via the explicit logoutBtn click.
   });
 
   // =====================================
@@ -1461,296 +1270,501 @@ suggestBtn.style.display = isLogin ? "none" : "inline-flex";
     document.getElementById("close-ban-panel").onclick = () => { panel.style.display = "none"; };
 
     const banFeedback = document.getElementById("ban-feedback");
-
     function showBanFeedback(msg, color) {
-        banFeedback.textContent = msg;
-        banFeedback.style.color = color || "#FFD700";
-        setTimeout(() => { banFeedback.textContent = ""; }, 3000);
+      banFeedback.textContent = msg;
+      banFeedback.style.color = color || "#FFD700";
+      setTimeout(() => { banFeedback.textContent = ""; }, 3000);
     }
 
     document.getElementById("ban-submit-btn").onclick = async () => {
-        const target   = document.getElementById("ban-username-input").value.trim();
-        const reason   = document.getElementById("ban-reason-input").value.trim() || "No reason provided";
-        const duration = document.getElementById("ban-duration-select").value;
-        if (!target) { showBanFeedback("❌ Enter a username", "#ff6b6b"); return; }
-        if (target === banAdminUser) { showBanFeedback("❌ Cannot ban the admin", "#ff6b6b"); return; }
-        const userSnap = await db.ref("users/" + target).once("value");
-        if (!userSnap.exists()) { showBanFeedback("❌ User not found", "#ff6b6b"); return; }
-        const durationMap = { "1h":3600000,"6h":21600000,"12h":43200000,"24h":86400000,"3d":259200000,"7d":604800000,"30d":2592000000 };
-        const until = duration === "permanent" ? "permanent" : Date.now() + (durationMap[duration] || 86400000);
-        await db.ref("bans/" + target).set({ reason, until, bannedBy: banAdminUser, bannedAt: Date.now() });
-        showBanFeedback(`✓ Banned ${target} ${duration === "permanent" ? "permanently" : "for " + duration}`, "#2ecc71");
-        document.getElementById("ban-username-input").value = "";
-        document.getElementById("ban-reason-input").value   = "";
+      const target   = document.getElementById("ban-username-input").value.trim();
+      const reason   = document.getElementById("ban-reason-input").value.trim() || "No reason provided";
+      const duration = document.getElementById("ban-duration-select").value;
+      if (!target) { showBanFeedback("❌ Enter a username", "#ff6b6b"); return; }
+      if (target === banAdminUser) { showBanFeedback("❌ Cannot ban the admin", "#ff6b6b"); return; }
+      const userSnap = await db.ref("users/" + target).once("value");
+      if (!userSnap.exists()) { showBanFeedback("❌ User not found", "#ff6b6b"); return; }
+      const durationMap = { "1h":3600000,"6h":21600000,"12h":43200000,"24h":86400000,"3d":259200000,"7d":604800000,"30d":2592000000 };
+      const until = duration === "permanent" ? "permanent" : Date.now() + (durationMap[duration] || 86400000);
+      await db.ref("bans/" + target).set({ reason, until, bannedBy: me(), bannedAt: Date.now() });
+      showBanFeedback(`✓ Banned ${target} ${duration === "permanent" ? "permanently" : "for " + duration}`, "#2ecc71");
+      document.getElementById("ban-username-input").value = "";
+      document.getElementById("ban-reason-input").value   = "";
     };
 
     document.getElementById("unban-submit-btn").onclick = async () => {
-        const target = document.getElementById("unban-username-input").value.trim();
-        if (!target) { showBanFeedback("❌ Enter a username", "#ff6b6b"); return; }
-        await db.ref("bans/" + target).remove();
-        showBanFeedback(`✓ Unbanned ${target}`, "#2ecc71");
-        document.getElementById("unban-username-input").value = "";
+      const target = document.getElementById("unban-username-input").value.trim();
+      if (!target) { showBanFeedback("❌ Enter a username", "#ff6b6b"); return; }
+      await db.ref("bans/" + target).remove();
+      showBanFeedback(`✓ Unbanned ${target}`, "#2ecc71");
+      document.getElementById("unban-username-input").value = "";
     };
 
-    // ── Site Status Toggle ──
     const statusBtn = document.getElementById("site-status-toggle-btn");
-
     function updateStatusBtn(isDown) {
-        if (isDown) {
-            statusBtn.textContent = "🔴 SITE IS DOWN — Click to bring UP";
-            statusBtn.style.borderColor = "rgba(255,107,107,0.5)";
-            statusBtn.style.background  = "rgba(255,107,107,0.1)";
-            statusBtn.style.color       = "#ff6b6b";
-        } else {
-            statusBtn.textContent = "🟢 SITE IS UP — Click to mark DOWN";
-            statusBtn.style.borderColor = "rgba(46,204,113,0.5)";
-            statusBtn.style.background  = "rgba(46,204,113,0.1)";
-            statusBtn.style.color       = "#2ecc71";
-        }
+      if (isDown) {
+        statusBtn.textContent = "🔴 SITE IS DOWN — Click to bring UP";
+        statusBtn.style.borderColor = "rgba(255,107,107,0.5)";
+        statusBtn.style.background  = "rgba(255,107,107,0.1)";
+        statusBtn.style.color       = "#ff6b6b";
+      } else {
+        statusBtn.textContent = "🟢 SITE IS UP — Click to mark DOWN";
+        statusBtn.style.borderColor = "rgba(46,204,113,0.5)";
+        statusBtn.style.background  = "rgba(46,204,113,0.1)";
+        statusBtn.style.color       = "#2ecc71";
+      }
     }
-
-    // Load initial state
-    db.ref("siteStatus/isDown").once("value").then(snap => {
-        updateStatusBtn(snap.val() === true);
-    });
-
-    // Keep in sync if another admin changes it
-    db.ref("siteStatus/isDown").on("value", snap => {
-        updateStatusBtn(snap.val() === true);
-    });
-
+    db.ref("siteStatus/isDown").once("value").then(snap => { updateStatusBtn(snap.val() === true); });
+    db.ref("siteStatus/isDown").on("value", snap => { updateStatusBtn(snap.val() === true); });
     statusBtn.onclick = async () => {
-        const snap   = await db.ref("siteStatus/isDown").once("value");
-        const isDown = snap.val() === true;
-        await db.ref("siteStatus").set({
-            isDown: !isDown,
-            updatedBy: banAdminUser,
-            updatedAt: Date.now()
-        });
+      const snap   = await db.ref("siteStatus/isDown").once("value");
+      const isDown = snap.val() === true;
+      await db.ref("siteStatus").set({ isDown: !isDown, updatedBy: me(), updatedAt: Date.now() });
     };
-
-} // end buildBanAdminPanel
+  }
 }); // end DOMContentLoaded
 
 // =====================================
-// CHAT SYSTEM
+// GLOBAL CHAT — REVAMPED
 // =====================================
-const chatToggle      = document.getElementById("chat-toggle");
-const chatPanel       = document.getElementById("chat-panel");
-const chatCloseBtn    = document.getElementById("chat-close");
-const chatMessages    = document.getElementById("chat-messages");
-const chatInput       = document.getElementById("chat-input");
-const chatSend        = document.getElementById("chat-send");
-const chatCharCount   = document.getElementById("chat-char-count");
-const typingIndicator = document.getElementById("typing-indicator");
-const chatBadge       = document.getElementById("chat-unread-badge");
-const onlineCount     = document.getElementById("chat-online-count");
-const typingRef       = db.ref("typing");
-const presenceRef     = db.ref("presence");
+(function initGlobalChat() {
+  const chatToggle    = document.getElementById("chat-toggle");
+  const chatPanel     = document.getElementById("chat-panel");
+  const chatCloseBtn  = document.getElementById("chat-close");
+  const chatMessages  = document.getElementById("chat-messages");
+  const chatInput     = document.getElementById("chat-input");
+  const chatSend      = document.getElementById("chat-send");
+  const chatCharCount = document.getElementById("chat-char-count");
+  const typingEl      = document.getElementById("typing-indicator");
+  const chatBadge     = document.getElementById("chat-unread-badge");
+  const onlineCount   = document.getElementById("chat-online-count");
+  const typingRef     = db.ref("typing");
+  const presenceRef   = db.ref("presence");
 
-let isPanelOpen = false;
-let unreadCount = 0;
-let lastDate    = null;
+  const REACTIONS = ["👍","❤️","😂","😮","😢","🔥"];
 
-chatToggle.onclick = () => {
-  isPanelOpen = true;
-  chatPanel.style.display = "flex";
-  unreadCount = 0;
-  chatBadge.style.display = "none";
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-};
-chatCloseBtn.onclick = () => { isPanelOpen = false; chatPanel.style.display = "none"; };
+  let isPanelOpen = false;
+  let unreadCount = 0;
+  let lastDate    = null;
+  let replyingTo  = null;
+  const seenKeys  = new Set();
 
-chatInput.addEventListener("input", () => {
-  const remaining = 300 - chatInput.value.length;
-  chatCharCount.textContent = remaining;
-  chatCharCount.style.color = remaining < 30 ? "#ff6b6b" : "";
-  const user = me() || "Guest";
-  if (chatInput.value.trim()) {
-    typingRef.child(user).set(true);
-    clearTimeout(chatInput._typingTimer);
-    chatInput._typingTimer = setTimeout(() => typingRef.child(user).remove(), 2200);
-  } else {
-    typingRef.child(user).remove();
-  }
-});
+  // ── Open / Close ──
+  chatToggle.onclick = () => {
+    isPanelOpen = true;
+    chatPanel.style.display = "flex";
+    chatPanel.classList.add("chat-open");
+    unreadCount = 0;
+    chatBadge.style.display = "none";
+    setTimeout(() => { chatMessages.scrollTop = chatMessages.scrollHeight; }, 60);
+  };
 
-typingRef.on("value", snap => {
-  const data = snap.val();
-  const user = me() || "Guest";
-  if (!data) { typingIndicator.innerHTML = ""; return; }
-  const others = Object.keys(data).filter(u => u !== user);
-  if (others.length) {
-    typingIndicator.innerHTML = `<span>${others.join(", ")} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
-  } else {
-    typingIndicator.innerHTML = "";
-  }
-});
+  chatCloseBtn.onclick = () => {
+    isPanelOpen = false;
+    chatPanel.classList.remove("chat-open");
+    chatPanel.classList.add("chat-closing");
+    chatPanel.addEventListener("animationend", () => {
+      chatPanel.style.display = "none";
+      chatPanel.classList.remove("chat-closing");
+    }, { once: true });
+    cancelReply();
+  };
 
-function goOnline() {
-  const user = me() || "Guest";
-  const ref  = presenceRef.child(user);
-  ref.set(true);
-  ref.onDisconnect().remove();
-}
-goOnline();
-window.addEventListener("ns_login",  () => goOnline());
-window.addEventListener("ns_logout", () => { presenceRef.child("Guest").remove(); });
-
-presenceRef.on("value", snap => {
-  const count = snap.numChildren();
-  onlineCount.textContent = count > 0 ? `${count} online` : "0 online";
-});
-
-function formatTime(ts) { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
-function formatDate(ts) {
-  const d = new Date(ts), now = new Date();
-  if (d.toDateString() === now.toDateString()) return "Today";
-  const yest = new Date(now); yest.setDate(now.getDate() - 1);
-  if (d.toDateString() === yest.toDateString()) return "Yesterday";
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-function getInitials(name) { return name ? name.charAt(0).toUpperCase() : "?"; }
-
-function buildAvatar(username, avatarUrl) {
-  const el = document.createElement("div");
-  el.className = "chat-avatar";
-  if (avatarUrl) {
-    const img = document.createElement("img");
-    img.src = avatarUrl;
-    img.onerror = () => { el.removeChild(img); el.textContent = getInitials(username); };
-    el.appendChild(img);
-  } else {
-    el.textContent = getInitials(username);
-  }
-  return el;
-}
-
-function editMessage(msgKey, bubbleEl) {
-  const textEl = bubbleEl.querySelector(".chat-text");
-  const currentText = textEl ? textEl.textContent : bubbleEl.querySelector("img") ? bubbleEl.querySelector("img").src : "";
-  const newText = prompt("Edit message:", currentText);
-  if (newText && newText.trim()) {
-    const filtered = filterMessage(newText.trim());
-    db.ref("messages/" + msgKey).update({ text: filtered });
-    const oldContent = bubbleEl.querySelector(".chat-text") || bubbleEl.querySelector("div");
-    const newContent = buildMessageContent(filtered);
-    if (oldContent) bubbleEl.replaceChild(newContent, oldContent);
-  }
-}
-
-function deleteMessage(msgKey, rowEl) {
-  if (confirm("Delete this message?")) {
-    db.ref("messages/" + msgKey).remove();
-    rowEl.remove();
-  }
-}
-
-async function sendMessage() {
-  const user = me() || "Guest";
-
-  if (!requireVerified("Global Chat")) return;
-
-  let msg = chatInput.value.trim();
-  if (!msg) return;
-
-  if (isImageUrl(msg) && !nsfwExemptUser(user)) {
-    const nsfw = await isNsfwImage(msg);
-    if (nsfw) {
-      chatInput.value = "";
-      chatCharCount.textContent = "300";
-      const warn = document.createElement("div");
-      warn.style.cssText = "color:#ff6b6b;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:4px 14px;background:#0D0B12;";
-      warn.textContent = "⚠ NSFW images are not allowed";
-      chatMessages.appendChild(warn);
-      setTimeout(() => warn.remove(), 3000);
-      return;
+  // ── Char counter & typing ──
+  chatInput.addEventListener("input", () => {
+    const remaining = 300 - chatInput.value.length;
+    chatCharCount.textContent = remaining;
+    chatCharCount.style.color = remaining < 30 ? "#ff6b6b" : "";
+    const user = me() || "Guest";
+    if (chatInput.value.trim()) {
+      typingRef.child(user).set({ av: myAvatar(), ts: Date.now() });
+      clearTimeout(chatInput._typingTimer);
+      chatInput._typingTimer = setTimeout(() => typingRef.child(user).remove(), 2200);
+    } else {
+      typingRef.child(user).remove();
     }
+  });
+
+  // ── Typing indicator with avatars ──
+  typingRef.on("value", snap => {
+    const data = snap.val();
+    const user = me() || "Guest";
+    if (!data) { typingEl.innerHTML = ""; return; }
+    const others = Object.entries(data).filter(([u]) => u !== user);
+    if (!others.length) { typingEl.innerHTML = ""; return; }
+
+    const avatarsHtml = others.slice(0, 3).map(([u, info]) => {
+      if (info && info.av) return `<img src="${info.av}" class="typing-av" alt="${u}" title="${u}" />`;
+      return `<div class="typing-av typing-av-init">${u.charAt(0).toUpperCase()}</div>`;
+    }).join("");
+
+    const names = others.map(([u]) => u);
+    const label = names.length === 1 ? `${names[0]} is typing`
+                : names.length === 2 ? `${names[0]} & ${names[1]} are typing`
+                : `${names[0]} + ${names.length - 1} others typing`;
+
+    typingEl.innerHTML = `<div class="typing-av-row">${avatarsHtml}</div><span class="typing-label-text">${label}</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
+  });
+
+  // ── Presence ──
+  function goOnline() {
+    const user = me() || "Guest";
+    const ref  = presenceRef.child(user);
+    ref.set(true);
+    ref.onDisconnect().remove();
+  }
+  goOnline();
+  window.addEventListener("ns_login",  () => goOnline());
+  window.addEventListener("ns_logout", () => presenceRef.child("Guest").remove());
+
+  presenceRef.on("value", snap => {
+    const c = snap.numChildren();
+    onlineCount.textContent = c > 0 ? `${c} online` : "0 online";
+  });
+
+  // ── Helpers ──
+  function formatTime(ts) { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+  function formatDate(ts) {
+    const d = new Date(ts), now = new Date();
+    if (d.toDateString() === now.toDateString()) return "Today";
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    if (d.toDateString() === yest.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+  function getInitials(name) { return name ? name.charAt(0).toUpperCase() : "?"; }
+
+  function buildAvatar(username, avatarUrl) {
+    const el = document.createElement("div");
+    el.className = "chat-avatar";
+    if (avatarUrl) {
+      const img = document.createElement("img");
+      img.src = avatarUrl;
+      img.onerror = () => { el.removeChild(img); el.textContent = getInitials(username); };
+      el.appendChild(img);
+    } else {
+      el.textContent = getInitials(username);
+    }
+    return el;
   }
 
-  msg = filterMessage(msg);
-  db.ref("messages").push({ user, text: msg, avatar: myAvatar(), time: Date.now() });
-  chatInput.value = "";
-  chatCharCount.textContent = "300";
-  typingRef.child(user).remove();
-}
-
-chatSend.onclick = sendMessage;
-chatInput.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
-
-chatInput.addEventListener("focus", () => {
-  if (me() && !isEmailVerified()) {
-    chatInput.blur();
-    showVerificationGate("Global Chat");
-  }
-});
-
-const seenKeys = new Set();
-
-db.ref("messages").limitToLast(60).on("child_added", snap => {
-  if (seenKeys.has(snap.key)) return;
-  seenKeys.add(snap.key);
-
-  const data   = snap.val();
-  const msgKey = snap.key;
-  const user   = me() || "Guest";
-  const isMe   = data.user === user;
-
-  const msgDate = formatDate(data.time);
-  if (msgDate !== lastDate) {
-    lastDate = msgDate;
-    const divider = document.createElement("div");
-    divider.className = "chat-day-divider"; divider.textContent = msgDate;
-    chatMessages.appendChild(divider);
+  // ── Reply bar ──
+  function setReply(msgKey, user, text) {
+    replyingTo = { key: msgKey, user, text };
+    let bar = document.getElementById("chat-reply-bar");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "chat-reply-bar";
+      chatPanel.insertBefore(bar, document.getElementById("chat-input-area"));
+    }
+    const snippet = (text || "").length > 55 ? text.slice(0, 55) + "…" : (text || "");
+    bar.innerHTML = `
+      <div class="reply-bar-inner">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+        <span class="reply-bar-name">${user}</span>
+        <span class="reply-bar-snippet">${snippet}</span>
+        <button class="reply-cancel-btn" id="reply-cancel-btn">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    `;
+    document.getElementById("reply-cancel-btn").onclick = cancelReply;
+    chatInput.focus();
   }
 
-  const row    = document.createElement("div");
-  row.classList.add("chat-row", isMe ? "me" : "other");
-  const avatar = buildAvatar(data.user, data.avatar || "");
-  const group  = document.createElement("div"); group.className = "chat-bubble-group";
-
-  if (!isMe) {
-    const sender = document.createElement("div");
-    sender.className = "chat-sender"; sender.textContent = data.user;
-    group.appendChild(sender);
+  function cancelReply() {
+    replyingTo = null;
+    const bar = document.getElementById("chat-reply-bar");
+    if (bar) bar.remove();
   }
 
-  const bubble = document.createElement("div"); bubble.className = "chat-bubble";
-  bubble.appendChild(buildMessageContent(data.text));
+  // ── Reaction picker ──
+  function showReactionPicker(msgKey, anchorEl) {
+    const old = document.getElementById("reaction-picker-popup");
+    if (old) { old.remove(); return; }
+    const picker = document.createElement("div");
+    picker.id = "reaction-picker-popup";
+    picker.className = "reaction-picker-popup";
+    REACTIONS.forEach(emoji => {
+      const btn = document.createElement("button");
+      btn.className = "rpick-btn";
+      btn.textContent = emoji;
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const user = me() || "Guest";
+        const hexKey = emoji.codePointAt(0).toString(16);
+        const ref = db.ref("chat_reactions/" + msgKey + "/" + hexKey + "/" + user);
+        ref.once("value").then(s => { if (s.exists()) ref.remove(); else ref.set(true); });
+        picker.remove();
+      };
+      picker.appendChild(btn);
+    });
 
-  const chatAdmins = new Set(["BabyFounder", "GDGamer05"]);
-if (isMe || chatAdmins.has(user)) {
-  const actions  = document.createElement("div"); actions.className = "chat-actions";
-    const editBtn  = document.createElement("button"); editBtn.className = "chat-action-btn"; editBtn.title = "Edit";
-    editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
-    editBtn.onclick = () => editMessage(msgKey, bubble);
-    const delBtn = document.createElement("button"); delBtn.className = "chat-action-btn del"; delBtn.title = "Delete";
-    delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
-    delBtn.onclick = () => deleteMessage(msgKey, row);
-    actions.appendChild(editBtn); actions.appendChild(delBtn);
-    bubble.appendChild(actions);
+    // Position relative to anchor
+    document.body.appendChild(picker);
+    const aRect = anchorEl.getBoundingClientRect();
+    const pRect = picker.getBoundingClientRect();
+    let top  = aRect.top - pRect.height - 8 + window.scrollY;
+    let left = aRect.left + aRect.width / 2 - pRect.width / 2 + window.scrollX;
+    if (left < 8) left = 8;
+    if (left + pRect.width > window.innerWidth - 8) left = window.innerWidth - pRect.width - 8;
+    picker.style.top  = top + "px";
+    picker.style.left = left + "px";
+
+    setTimeout(() => {
+      document.addEventListener("click", function dismiss(e) {
+        if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener("click", dismiss); }
+      });
+    }, 10);
   }
 
-  group.appendChild(bubble);
-  const timeEl = document.createElement("div"); timeEl.className = "chat-time"; timeEl.textContent = formatTime(data.time);
-  group.appendChild(timeEl);
-
-  if (isMe) { row.appendChild(group); row.appendChild(avatar); }
-  else       { row.appendChild(avatar); row.appendChild(group); }
-
-  chatMessages.appendChild(row);
-
-  if (!isPanelOpen) {
-    unreadCount++;
-    chatBadge.textContent   = unreadCount > 9 ? "9+" : unreadCount;
-    chatBadge.style.display = "flex";
+  // ── Watch reactions ──
+  const reactionListeners = {};
+  function watchReactions(msgKey, reactionsRow) {
+    if (reactionListeners[msgKey]) return;
+    const ref = db.ref("chat_reactions/" + msgKey);
+    reactionListeners[msgKey] = ref;
+    ref.on("value", snap => {
+      const data = snap.val() || {};
+      reactionsRow.innerHTML = "";
+      Object.entries(data).forEach(([hexKey, users]) => {
+        const count = Object.keys(users).length;
+        if (!count) return;
+        const emoji = String.fromCodePoint(parseInt(hexKey, 16));
+        const pill = document.createElement("button");
+        pill.className = "reaction-pill";
+        const user = me() || "Guest";
+        if (users[user]) pill.classList.add("mine");
+        pill.innerHTML = `<span class="rpill-emoji">${emoji}</span><span class="rpill-count">${count}</span>`;
+        const whoList = Object.keys(users).join(", ");
+        pill.title = whoList;
+        pill.onclick = () => {
+          const ref2 = db.ref("chat_reactions/" + msgKey + "/" + hexKey + "/" + user);
+          if (users[user]) ref2.remove(); else ref2.set(true);
+        };
+        reactionsRow.appendChild(pill);
+      });
+    });
   }
 
-  const nearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 80;
-  if (nearBottom || isMe) chatMessages.scrollTop = chatMessages.scrollHeight;
-});
+  // ── Build a single message row ──
+  function buildMessageRow(snap) {
+    const data   = snap.val();
+    const msgKey = snap.key;
+    const user   = me() || "Guest";
+    const isMe   = data.user === user;
+    const isAdmin = chatAdmins.has(user);
+    const canManage = isMe || isAdmin;
+
+    // Date divider
+    const msgDate = formatDate(data.time);
+    if (msgDate !== lastDate) {
+      lastDate = msgDate;
+      const divider = document.createElement("div");
+      divider.className = "chat-day-divider";
+      divider.innerHTML = `<span>${msgDate}</span>`;
+      chatMessages.appendChild(divider);
+    }
+
+    const row = document.createElement("div");
+    row.classList.add("chat-row", isMe ? "me" : "other");
+    row.dataset.msgKey = msgKey;
+
+    const avatar = buildAvatar(data.user, data.avatar || "");
+
+    const group = document.createElement("div");
+    group.className = "chat-bubble-group";
+
+    // Sender name + badge
+    if (!isMe) {
+      const sender = document.createElement("div");
+      sender.className = "chat-sender";
+      sender.textContent = data.user;
+      if (chatAdmins.has(data.user)) {
+        const mod = document.createElement("span");
+        mod.className = "chat-mod-badge";
+        mod.textContent = "MOD";
+        sender.appendChild(mod);
+      }
+      group.appendChild(sender);
+    }
+
+    // Reply quote
+    if (data.replyTo) {
+      const quote = document.createElement("div");
+      quote.className = "chat-reply-quote";
+      quote.innerHTML = `<span class="rq-name">${data.replyTo.user || ""}</span><span class="rq-text">${(data.replyTo.text || "").slice(0, 80)}</span>`;
+      group.appendChild(quote);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+
+    // Content
+    bubble.appendChild(buildMessageContent(data.text));
+
+    // Edited tag
+    if (data.edited) {
+      const etag = document.createElement("span");
+      etag.className = "chat-edited-tag";
+      etag.textContent = "edited";
+      bubble.appendChild(etag);
+    }
+
+    // Hover toolbar
+    const toolbar = document.createElement("div");
+    toolbar.className = isMe ? "chat-toolbar toolbar-left" : "chat-toolbar toolbar-right";
+
+    // Emoji react btn
+    const emojiBtn = document.createElement("button");
+    emojiBtn.className = "ctb-btn";
+    emojiBtn.title = "React";
+    emojiBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`;
+    emojiBtn.onclick = (e) => { e.stopPropagation(); showReactionPicker(msgKey, emojiBtn); };
+
+    // Reply btn
+    const replyBtn = document.createElement("button");
+    replyBtn.className = "ctb-btn";
+    replyBtn.title = "Reply";
+    replyBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>`;
+    replyBtn.onclick = () => {
+      const textEl = bubble.querySelector(".chat-text");
+      setReply(msgKey, data.user, textEl ? textEl.textContent : (data.text || ""));
+    };
+
+    toolbar.appendChild(emojiBtn);
+    toolbar.appendChild(replyBtn);
+
+    if (canManage) {
+      if (isMe) {
+        const editBtn = document.createElement("button");
+        editBtn.className = "ctb-btn";
+        editBtn.title = "Edit";
+        editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+        editBtn.onclick = () => {
+          const textEl2 = bubble.querySelector(".chat-text");
+          const cur = textEl2 ? textEl2.textContent : "";
+          const nw  = prompt("Edit message:", cur);
+          if (nw && nw.trim()) {
+            const filtered = filterMessage(nw.trim());
+            db.ref("messages/" + msgKey).update({ text: filtered, edited: true });
+          }
+        };
+        toolbar.appendChild(editBtn);
+      }
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "ctb-btn danger";
+      delBtn.title = "Delete";
+      delBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+      delBtn.onclick = () => {
+        if (confirm("Delete this message?")) {
+          db.ref("messages/" + msgKey).remove();
+          db.ref("chat_reactions/" + msgKey).remove();
+          row.remove();
+        }
+      };
+      toolbar.appendChild(delBtn);
+    }
+
+    bubble.appendChild(toolbar);
+    group.appendChild(bubble);
+
+    // Reactions row
+    const reactionsRow = document.createElement("div");
+    reactionsRow.className = "chat-reactions-row";
+    group.appendChild(reactionsRow);
+    watchReactions(msgKey, reactionsRow);
+
+    // Timestamp
+    const timeEl = document.createElement("div");
+    timeEl.className = "chat-time";
+    timeEl.textContent = formatTime(data.time);
+    group.appendChild(timeEl);
+
+    if (isMe) { row.appendChild(group); row.appendChild(avatar); }
+    else       { row.appendChild(avatar); row.appendChild(group); }
+
+    chatMessages.appendChild(row);
+  }
+
+  // ── Send message ──
+  async function sendMessage() {
+    const user = me() || "Guest";
+    if (!requireVerified("Global Chat")) return;
+    let msg = chatInput.value.trim();
+    if (!msg) return;
+
+    if (isImageUrl(msg) && !nsfwExemptUser(user)) {
+      const nsfw = await isNsfwImage(msg);
+      if (nsfw) {
+        chatInput.value = "";
+        chatCharCount.textContent = "300";
+        const warn = document.createElement("div");
+        warn.style.cssText = "color:#ff6b6b;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:4px 14px 6px;";
+        warn.textContent = "⚠ NSFW images are not allowed";
+        chatMessages.appendChild(warn);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        setTimeout(() => warn.remove(), 3000);
+        return;
+      }
+    }
+
+    msg = filterMessage(msg);
+    const payload = { user, text: msg, avatar: myAvatar(), time: Date.now() };
+    if (replyingTo) {
+      payload.replyTo = { key: replyingTo.key, user: replyingTo.user, text: (replyingTo.text || "").slice(0, 100) };
+    }
+
+    db.ref("messages").push(payload);
+    chatInput.value = "";
+    chatCharCount.textContent = "300";
+    typingRef.child(user).remove();
+    cancelReply();
+  }
+
+  chatSend.onclick = sendMessage;
+  chatInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  chatInput.addEventListener("focus", () => {
+    if (me() && !isEmailVerified()) { chatInput.blur(); showVerificationGate("Global Chat"); }
+  });
+
+  // ── Live feed ──
+  db.ref("messages").limitToLast(80).on("child_added", snap => {
+    if (seenKeys.has(snap.key)) return;
+    seenKeys.add(snap.key);
+    buildMessageRow(snap);
+
+    const user = me() || "Guest";
+    if (!isPanelOpen && snap.val().user !== user) {
+      unreadCount++;
+      chatBadge.textContent   = unreadCount > 9 ? "9+" : unreadCount;
+      chatBadge.style.display = "flex";
+    }
+
+    const nearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 100;
+    if (nearBottom || snap.val().user === user) chatMessages.scrollTop = chatMessages.scrollHeight;
+  });
+
+  // ── Live edits ──
+  db.ref("messages").on("child_changed", snap => {
+    const existing = chatMessages.querySelector(`[data-msg-key="${snap.key}"]`);
+    if (!existing) return;
+    const data = snap.val();
+    const textEl = existing.querySelector(".chat-text");
+    if (textEl) textEl.textContent = data.text || "";
+    const etag = existing.querySelector(".chat-edited-tag");
+    if (data.edited && !etag) {
+      const newTag = document.createElement("span");
+      newTag.className = "chat-edited-tag";
+      newTag.textContent = "edited";
+      existing.querySelector(".chat-bubble").appendChild(newTag);
+    }
+  });
+
+})();
 
 // =====================================
 // DIRECT MESSAGES SYSTEM
@@ -1806,10 +1820,10 @@ if (isMe || chatAdmins.has(user)) {
     if (avatarUrl) {
       const img = document.createElement("img");
       img.src = avatarUrl;
-      img.onerror = () => { el.removeChild(img); el.textContent = getInitials(username); };
+      img.onerror = () => { el.removeChild(img); el.textContent = (username ? username.charAt(0).toUpperCase() : "?"); };
       el.appendChild(img);
     } else {
-      el.textContent = getInitials(username);
+      el.textContent = username ? username.charAt(0).toUpperCase() : "?";
     }
     return el;
   }
@@ -1819,11 +1833,9 @@ if (isMe || chatAdmins.has(user)) {
   }
 
   function refreshUnreadBadge() {
-    const msgUnread = Object.entries(dmUnreadByUser)
-      .filter(([k]) => k !== "__requests__")
-      .reduce((a, [, b]) => a + b, 0);
-    const reqCount = dmUnreadByUser["__requests__"] || 0;
-    const total    = msgUnread + reqCount;
+    const msgUnread = Object.entries(dmUnreadByUser).filter(([k]) => k !== "__requests__").reduce((a, [, b]) => a + b, 0);
+    const reqCount  = dmUnreadByUser["__requests__"] || 0;
+    const total     = msgUnread + reqCount;
     if (total > 0) {
       dmUnreadBadge.textContent   = total > 9 ? "9+" : total;
       dmUnreadBadge.style.display = "flex";
@@ -1836,10 +1848,7 @@ if (isMe || chatAdmins.has(user)) {
 
   dmBtnFloat.onclick = e => {
     e.stopPropagation();
-    if (me() && !isEmailVerified()) {
-      showVerificationGate("Direct Messages & Friends");
-      return;
-    }
+    if (me() && !isEmailVerified()) { showVerificationGate("Direct Messages & Friends"); return; }
     isDMOpen = !isDMOpen;
     dmPanel.style.display = isDMOpen ? "flex" : "none";
     if (isDMOpen && activeFriend) {
@@ -1851,14 +1860,12 @@ if (isMe || chatAdmins.has(user)) {
 
   document.addEventListener("click", e => {
     if (isDMOpen && !dmPanel.contains(e.target) && e.target !== dmBtnFloat && !dmBtnFloat.contains(e.target)) {
-      isDMOpen = false;
-      dmPanel.style.display = "none";
+      isDMOpen = false; dmPanel.style.display = "none";
     }
   });
 
   async function addFriend() {
     if (!requireVerified("Adding Friends")) return;
-
     const user = me();
     if (!user) { showToast("⚠ Log in first"); return; }
     const target = dmAddInput.value.trim();
@@ -1875,8 +1882,7 @@ if (isMe || chatAdmins.has(user)) {
       await friendsRef(user).child(target).set({ addedAt: Date.now(), preview: "" });
       await friendsRef(target).child(user).set({ addedAt: Date.now(), preview: "" });
       await db.ref("friend_requests/" + user + "/" + target).remove();
-      showToast("✓ Now friends with " + target);
-      return;
+      showToast("✓ Now friends with " + target); return;
     }
     await db.ref("friend_requests/" + target + "/" + user).set({ from: user, avatar: myAvatar(), sentAt: Date.now() });
     showToast("✓ Friend request sent to " + target);
@@ -1884,12 +1890,8 @@ if (isMe || chatAdmins.has(user)) {
 
   dmAddBtn.onclick = addFriend;
   dmAddInput.addEventListener("keydown", e => { if (e.key === "Enter") addFriend(); });
-
   dmAddInput.addEventListener("focus", () => {
-    if (me() && !isEmailVerified()) {
-      dmAddInput.blur();
-      showVerificationGate("Adding Friends");
-    }
+    if (me() && !isEmailVerified()) { dmAddInput.blur(); showVerificationGate("Adding Friends"); }
   });
 
   async function removeFriend(target) {
@@ -1996,7 +1998,6 @@ if (isMe || chatAdmins.has(user)) {
       empty.className = "dm-empty"; empty.textContent = "Log in to use Direct Messages.";
       dmFriendsList.appendChild(empty); return;
     }
-
     if (!friends.length) {
       const empty = document.createElement("div");
       empty.className = "dm-empty"; empty.textContent = "Add a friend to start chatting privately.";
@@ -2009,15 +2010,8 @@ if (isMe || chatAdmins.has(user)) {
       const avatarEl = buildAvatarEl(friend, "", 32);
       db.ref("users/" + friend + "/avatar").once("value").then(s => {
         const av = s.val() || "";
-        if (av) {
-          avatarEl.innerHTML = "";
-          const img = document.createElement("img");
-          img.src = av;
-          img.onerror = () => { avatarEl.innerHTML = ""; avatarEl.textContent = getInitials(friend); };
-          avatarEl.appendChild(img);
-        } else {
-          avatarEl.textContent = getInitials(friend);
-        }
+        if (av) { avatarEl.innerHTML = ""; const img = document.createElement("img"); img.src = av; img.onerror = () => { avatarEl.innerHTML = ""; avatarEl.textContent = friend.charAt(0).toUpperCase(); }; avatarEl.appendChild(img); }
+        else { avatarEl.textContent = friend.charAt(0).toUpperCase(); }
       });
 
       const info    = document.createElement("div"); info.className = "dm-friend-info";
@@ -2052,7 +2046,7 @@ if (isMe || chatAdmins.has(user)) {
     if (dmTypingListRef && dmTypingListener) { dmTypingListRef.off("value", dmTypingListener); dmTypingListener = null; dmTypingListRef = null; }
     dmUnreadByUser[friend] = 0; refreshUnreadBadge();
     dmNoConvo.style.display = "none"; dmConvo.style.display = "flex";
-    dmChatWith.textContent  = friend === me() ? friend + " (You — Notes to self)" : friend;
+    dmChatWith.textContent  = friend === me() ? friend + " (Notes to self)" : friend;
     dmMessages.innerHTML    = "";
     renderFriendsList(localFriendsCache);
 
@@ -2069,11 +2063,7 @@ if (isMe || chatAdmins.has(user)) {
     if (friend !== me()) {
       dmTypingListRef  = db.ref("dm_typing/" + activeConvoId + "/" + friend);
       dmTypingListener = dmTypingListRef.on("value", snap => {
-        if (snap.val()) {
-          dmTypingEl.innerHTML = `<span>${friend} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>`;
-        } else {
-          dmTypingEl.innerHTML = "";
-        }
+        dmTypingEl.innerHTML = snap.val() ? `<span>${friend} typing</span><span class="typing-dots"><span></span><span></span><span></span></span>` : "";
       });
     } else {
       dmTypingEl.innerHTML = "";
@@ -2104,22 +2094,21 @@ if (isMe || chatAdmins.has(user)) {
     bubble.appendChild(buildMessageContent(data.text));
 
     if (isMe) {
-      const actions = document.createElement("div"); actions.className = "chat-actions";
-      const editBtn = document.createElement("button"); editBtn.className = "chat-action-btn"; editBtn.title = "Edit";
-      editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+      const actions = document.createElement("div"); actions.className = "chat-toolbar toolbar-left";
+      const editBtn = document.createElement("button"); editBtn.className = "ctb-btn"; editBtn.title = "Edit";
+      editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
       editBtn.onclick = () => {
-        const currentText = bubble.querySelector(".chat-text") ? bubble.querySelector(".chat-text").textContent : bubble.querySelector("img") ? bubble.querySelector("img").src : "";
+        const currentText = bubble.querySelector(".chat-text") ? bubble.querySelector(".chat-text").textContent : "";
         const newText = prompt("Edit message:", currentText);
         if (newText && newText.trim()) {
           const filtered = filterMessage(newText.trim());
           db.ref("dms/" + activeConvoId + "/messages/" + key).update({ text: filtered });
-          const oldContent = bubble.querySelector(".chat-text, div:not(.chat-actions)");
-          const newContent = buildMessageContent(filtered);
-          if (oldContent) bubble.replaceChild(newContent, oldContent);
+          const oldContent = bubble.querySelector(".chat-text");
+          if (oldContent) { const newContent = buildMessageContent(filtered); bubble.replaceChild(newContent, oldContent); }
         }
       };
-      const delBtn = document.createElement("button"); delBtn.className = "chat-action-btn del"; delBtn.title = "Delete";
-      delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+      const delBtn = document.createElement("button"); delBtn.className = "ctb-btn danger"; delBtn.title = "Delete";
+      delBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
       delBtn.onclick = () => { if (confirm("Delete this message?")) { db.ref("dms/" + activeConvoId + "/messages/" + key).remove(); row.remove(); } };
       actions.appendChild(editBtn); actions.appendChild(delBtn); bubble.appendChild(actions);
     }
@@ -2132,20 +2121,19 @@ if (isMe || chatAdmins.has(user)) {
     dmMessages.appendChild(row);
   }
 
+  function formatTimeShort(ts) { return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+
   async function sendDM() {
     if (!requireVerified("Direct Messages")) return;
-
     const user = me();
-    if (!user)    { showToast("⚠ Log in to send messages"); return; }
+    if (!user) { showToast("⚠ Log in to send messages"); return; }
     if (!activeFriend || !activeConvoId) return;
     const text = dmInput.value.trim();
     if (!text) return;
-
     if (isImageUrl(text) && !nsfwExemptUser(user)) {
       const nsfw = await isNsfwImage(text);
       if (nsfw) { dmInput.value = ""; showToast("⚠ NSFW images are not allowed"); return; }
     }
-
     const clean = filterMessage(text);
     db.ref("dms/" + activeConvoId + "/messages").push({ sender: user, avatar: myAvatar(), text: clean, time: Date.now() });
     if (activeFriend !== user) db.ref("dm_typing/" + activeConvoId + "/" + user).remove();
@@ -2155,14 +2143,9 @@ if (isMe || chatAdmins.has(user)) {
 
   dmSend.onclick = sendDM;
   dmInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendDM(); } });
-
   dmInput.addEventListener("focus", () => {
-    if (me() && !isEmailVerified()) {
-      dmInput.blur();
-      showVerificationGate("Direct Messages");
-    }
+    if (me() && !isEmailVerified()) { dmInput.blur(); showVerificationGate("Direct Messages"); }
   });
-
   dmInput.addEventListener("input", () => {
     if (!activeConvoId || activeFriend === me()) return;
     const user = me(); if (!user) return;
@@ -2197,11 +2180,10 @@ if (isMe || chatAdmins.has(user)) {
 
   window.addEventListener("ns_login", e => {
     const { username } = e.detail;
-    dmUnreadByUser     = {};
+    dmUnreadByUser = {};
     refreshUnreadBadge();
     startFriendsListener(username);
   });
-
   window.addEventListener("ns_logout", () => {
     stopFriendsListener();
     closeConversation();
@@ -2246,23 +2228,15 @@ if (isMe || chatAdmins.has(user)) {
     epMessage.textContent = "";
     epEmailStat.textContent = "";
     newAvatarB64 = "";
-
     const snap = await db.ref("users/" + user).once("value");
     const data = snap.val() || {};
-
     epEmail.value = data.email || "";
-    if (data.avatar) {
-      epAvatarPrev.src = data.avatar;
-      epAvatarPrev.style.display = "block";
-    } else {
-      epAvatarPrev.style.display = "none";
-    }
-
+    if (data.avatar) { epAvatarPrev.src = data.avatar; epAvatarPrev.style.display = "block"; }
+    else { epAvatarPrev.style.display = "none"; }
     if (data.email) {
       epEmailStat.style.color = data.emailVerified ? "#2ecc71" : "var(--gold-dim)";
       epEmailStat.textContent = data.emailVerified ? "✓ Verified" : "✗ Not verified";
     }
-
     popup.style.display = "flex";
   };
 
@@ -2272,45 +2246,30 @@ if (isMe || chatAdmins.has(user)) {
   epAvatarIn.addEventListener("change", e => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      newAvatarB64 = reader.result;
-      epAvatarPrev.src = newAvatarB64;
-      epAvatarPrev.style.display = "block";
-    };
+    reader.onload = () => { newAvatarB64 = reader.result; epAvatarPrev.src = newAvatarB64; epAvatarPrev.style.display = "block"; };
     reader.readAsDataURL(file);
   });
 
-  // FIX: Corrected epSubmit handler — was using undefined `fbUser`, now uses `currentFbUser`
   epSubmit.onclick = async () => {
     const user = me(); if (!user) return;
     epMessage.textContent = "";
     epSubmit.disabled = true;
     epMessage.style.color = "var(--red)";
-
     const snap = await db.ref("users/" + user).once("value");
     const data = snap.val() || {};
-
     const newEmail    = epEmail.value.trim();
     const newPassword = epPassword.value.trim();
     const updates     = {};
-
-    if (newAvatarB64) {
-      updates.avatar = newAvatarB64;
-    }
-
+    if (newAvatarB64) updates.avatar = newAvatarB64;
     if (newEmail && newEmail !== data.email) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-        epMessage.textContent = "❌ Invalid email address";
-        epSubmit.disabled = false; return;
+        epMessage.textContent = "❌ Invalid email address"; epSubmit.disabled = false; return;
       }
       updates.email = newEmail;
       updates.emailVerified = false;
     }
-
     try {
-      // FIX: use currentFbUser instead of undefined fbUser
       const currentFbUser = auth.currentUser;
-
       if (newEmail && newEmail !== data.email) {
         if (currentFbUser) {
           await currentFbUser.updateEmail(newEmail);
@@ -2322,11 +2281,7 @@ if (isMe || chatAdmins.has(user)) {
           showVerificationBanner();
           updateVerifiedBadge(false);
         } else {
-          // Legacy user — create Firebase Auth account with new email
-          if (!newPassword) {
-            epMessage.textContent = "❌ Enter a password to link your email";
-            epSubmit.disabled = false; return;
-          }
+          if (!newPassword) { epMessage.textContent = "❌ Enter a password to link your email"; epSubmit.disabled = false; return; }
           const cred = await auth.createUserWithEmailAndPassword(newEmail, newPassword);
           await cred.user.sendEmailVerification(actionCodeSettings);
           updates.firebaseUid   = cred.user.uid;
@@ -2338,37 +2293,23 @@ if (isMe || chatAdmins.has(user)) {
           updateVerifiedBadge(false);
         }
       }
-
       if (newPassword) {
-        if (currentFbUser) {
-          await currentFbUser.updatePassword(newPassword);
-        }
-        // Always update the hash in DB so login works
-        updates.passwordHash = simpleHash(newPassword);
+        if (currentFbUser) await currentFbUser.updatePassword(newPassword);
+        updates.passwordHash = (function simpleHash(str) { let h=0; for(let i=0;i<str.length;i++) h=(Math.imul(31,h)+str.charCodeAt(i))|0; return h.toString(36); })(newPassword);
       }
-
-      // Save all updates to DB
-      if (Object.keys(updates).length) {
-        await db.ref("users/" + user).update(updates);
-      }
-
-      // Update session avatar immediately without re-login
+      if (Object.keys(updates).length) await db.ref("users/" + user).update(updates);
       if (newAvatarB64) {
         setSession(user, newAvatarB64, _emailVerified, _firebaseUid);
         const avatarEl = document.getElementById("user-avatar");
         if (avatarEl) { avatarEl.src = newAvatarB64; avatarEl.style.display = "inline-block"; }
       }
-
-      // FIX: Refresh epEmailStat to reflect new email without requiring logout
       if (newEmail && newEmail !== data.email) {
         epEmailStat.style.color = "var(--gold-dim)";
         epEmailStat.textContent = "✗ Not verified (check inbox)";
       }
-
       epMessage.style.color = "#2ecc71";
       epMessage.textContent = "✓ Profile updated!";
       setTimeout(() => { popup.style.display = "none"; }, 1200);
-
     } catch (err) {
       epMessage.style.color = "var(--red)";
       if (err.code === "auth/requires-recent-login") {
@@ -2377,10 +2318,10 @@ if (isMe || chatAdmins.has(user)) {
         epMessage.textContent = "❌ " + (err.message || "Update failed");
       }
     }
-
     epSubmit.disabled = false;
   };
 })();
+
 // =====================================
 // SITE STATUS OVERLAY
 // =====================================
@@ -2389,54 +2330,15 @@ if (isMe || chatAdmins.has(user)) {
 
   const overlay = document.createElement('div');
   overlay.id = 'site-down-overlay';
-  overlay.style.cssText = `
-  position:fixed;inset:0;z-index:999999;
-  background-color:#07060A;
-  background-image:
-    radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255,215,0,0.07) 0%, transparent 65%),
-    radial-gradient(ellipse 55% 40% at 90% 100%, rgba(255,215,0,0.04) 0%, transparent 60%),
-    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,215,0,0.022) 39px, rgba(255,215,0,0.022) 40px),
-    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,215,0,0.016) 39px, rgba(255,215,0,0.016) 40px);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  overflow-y:auto;
-  padding:20px 0;
-  font-family:'EB Garamond',Georgia,serif;
-  color:#FFD700;
-`;
+  overlay.style.cssText = `position:fixed;inset:0;z-index:999999;background-color:#07060A;background-image:radial-gradient(ellipse 90% 55% at 50% -5%, rgba(255,215,0,0.07) 0%, transparent 65%),radial-gradient(ellipse 55% 40% at 90% 100%, rgba(255,215,0,0.04) 0%, transparent 60%),repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,215,0,0.022) 39px, rgba(255,215,0,0.022) 40px),repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,215,0,0.016) 39px, rgba(255,215,0,0.016) 40px);display:none;align-items:center;justify-content:center;overflow-y:auto;padding:20px 0;font-family:'EB Garamond',Georgia,serif;color:#FFD700;`;
   overlay.innerHTML = `
-  <div style="
-    display:flex;
-    flex-direction:row;
-    align-items:center;
-    justify-content:center;
-    gap:32px;
-    width:95%;
-    max-width:900px;
-    flex-wrap:wrap;
-  ">
-    <!-- Left: Down message -->
-    <div style="
-      background:linear-gradient(160deg,#141219,#0D0B12);
-      border:1px solid rgba(184,150,12,0.45);
-      border-radius:24px;
-      padding:52px 44px 48px;
-      text-align:center;
-      flex:1;
-      min-width:260px;
-      max-width:420px;
-      box-shadow:0 40px 100px rgba(0,0,0,0.85);
-      position:relative;
-      overflow:hidden;
-    ">
+  <div style="display:flex;flex-direction:row;align-items:center;justify-content:center;gap:32px;width:95%;max-width:900px;flex-wrap:wrap;">
+    <div style="background:linear-gradient(160deg,#141219,#0D0B12);border:1px solid rgba(184,150,12,0.45);border-radius:24px;padding:52px 44px 48px;text-align:center;flex:1;min-width:260px;max-width:420px;box-shadow:0 40px 100px rgba(0,0,0,0.85);position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.3),transparent);"></div>
       <img src="https://iili.io/BxXnFTX.png" style="height:100px;object-fit:contain;filter:drop-shadow(0 0 12px rgba(255,215,0,0.35));margin-bottom:20px;display:block;margin-left:auto;margin-right:auto;"/>
       <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(18px,3vw,26px);font-weight:900;letter-spacing:4px;color:#FFD700;text-shadow:0 0 40px rgba(255,215,0,0.28),0 2px 6px rgba(0,0,0,0.9);margin-bottom:28px;">NoteShelf</div>
       <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,215,0,0.03));border:1px solid rgba(184,150,12,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;box-shadow:0 0 24px rgba(255,215,0,0.1);">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
       <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:5px;color:#B8960C;opacity:0.42;margin-bottom:20px;">◆ &nbsp;━━━&nbsp; ◆ &nbsp;━━━&nbsp; ◆</div>
       <div style="font-family:'Cinzel',serif;font-size:clamp(12px,2vw,15px);font-weight:600;letter-spacing:1.2px;color:#F0E6CA;line-height:1.75;margin-bottom:10px;">NoteShelf is temporarily unavailable.</div>
@@ -2447,20 +2349,7 @@ if (isMe || chatAdmins.has(user)) {
         <span style="width:5px;height:5px;border-radius:50%;background:#B8960C;opacity:0.4;animation:dotBounce 1.4s ease 0.44s infinite;display:inline-block;"></span>
       </div>
     </div>
-
-    <!-- Right: Snake game -->
-    <div style="
-      background:linear-gradient(160deg,#141219,#0D0B12);
-      border:1px solid rgba(184,150,12,0.35);
-      border-radius:20px;
-      padding:20px 24px 24px;
-      text-align:center;
-      flex:1;
-      min-width:260px;
-      max-width:380px;
-      box-shadow:0 20px 60px rgba(0,0,0,0.7);
-      position:relative;
-    ">
+    <div style="background:linear-gradient(160deg,#141219,#0D0B12);border:1px solid rgba(184,150,12,0.35);border-radius:20px;padding:20px 24px 24px;text-align:center;flex:1;min-width:260px;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.7);position:relative;">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,215,0,0.2),transparent);"></div>
       <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#B8960C;opacity:0.7;margin-bottom:12px;">While you wait</div>
       <canvas id="snake-canvas" width="300" height="300" style="border:1px solid rgba(184,150,12,0.3);border-radius:8px;display:block;margin:0 auto 14px;background:#07060A;"></canvas>
@@ -2470,311 +2359,111 @@ if (isMe || chatAdmins.has(user)) {
         <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;color:#B8960C;">BEST</div>
         <div id="snake-best" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#FFD700;min-width:40px;">0</div>
       </div>
-      <button id="snake-start-btn" style="
-        padding:9px 28px;
-        border-radius:30px;
-        border:1px solid rgba(184,150,12,0.55);
-        background:rgba(255,215,0,0.08);
-        color:#FFD700;
-        font-family:'Cinzel',serif;
-        font-size:11px;
-        letter-spacing:2px;
-        text-transform:uppercase;
-        cursor:pointer;
-        margin-bottom:10px;
-      ">Start Game</button>
+      <button id="snake-start-btn" style="padding:9px 28px;border-radius:30px;border:1px solid rgba(184,150,12,0.55);background:rgba(255,215,0,0.08);color:#FFD700;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:10px;">Start Game</button>
       <div style="font-family:'EB Garamond',serif;font-style:italic;font-size:12px;color:#B8960C;opacity:0.55;">Arrow keys or WASD to move</div>
       <div style="display:flex;justify-content:center;gap:4px;margin-top:14px;">
         <button id="snake-up" style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▲</button>
       </div>
       <div style="display:flex;justify-content:center;gap:4px;margin-top:4px;">
-        <button id="snake-left"  style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">◀</button>
-        <button id="snake-down"  style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▼</button>
+        <button id="snake-left" style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">◀</button>
+        <button id="snake-down" style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▼</button>
         <button id="snake-right" style="width:38px;height:38px;border-radius:8px;border:1px solid rgba(184,150,12,0.3);background:rgba(255,215,0,0.05);color:#B8960C;font-size:14px;cursor:pointer;">▶</button>
       </div>
     </div>
-  </div>
-`;
+  </div>`;
   document.body.appendChild(overlay);
 
-  // ── Audio Engine ──
   let audioCtx = null;
-
-  function getAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    return audioCtx;
-  }
-
+  function getAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
   function playTone(freq, type, duration, volume, delay) {
-    try {
-      const ctx  = getAudio();
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type      = type || 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + (delay || 0));
-      gain.gain.setValueAtTime(volume || 0.18, ctx.currentTime + (delay || 0));
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (delay || 0) + duration);
-      osc.start(ctx.currentTime + (delay || 0));
-      osc.stop(ctx.currentTime  + (delay || 0) + duration);
-    } catch(_) {}
+    try { const ctx=getAudio(),osc=ctx.createOscillator(),gain=ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.type=type||'sine'; osc.frequency.setValueAtTime(freq,ctx.currentTime+(delay||0)); gain.gain.setValueAtTime(volume||0.18,ctx.currentTime+(delay||0)); gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+(delay||0)+duration); osc.start(ctx.currentTime+(delay||0)); osc.stop(ctx.currentTime+(delay||0)+duration); } catch(_) {}
   }
+  function soundEat()   { playTone(880,'sine',0.12,0.15); playTone(1320,'sine',0.10,0.10,0.06); }
+  function soundMove()  { playTone(200,'square',0.04,0.04); }
+  function soundDie()   { playTone(320,'sawtooth',0.15,0.18); playTone(200,'sawtooth',0.18,0.18,0.12); playTone(100,'sawtooth',0.25,0.18,0.26); }
+  function soundStart() { playTone(440,'sine',0.10,0.12); playTone(550,'sine',0.10,0.12,0.10); playTone(660,'sine',0.10,0.12,0.20); playTone(880,'sine',0.14,0.14,0.32); }
+  function soundNewBest(){ playTone(660,'sine',0.10,0.15); playTone(880,'sine',0.10,0.15,0.10); playTone(1100,'sine',0.10,0.15,0.20); playTone(1320,'sine',0.16,0.18,0.32); }
 
-  function soundEat() {
-    // Bright gold chime
-    playTone(880, 'sine',     0.12, 0.15);
-    playTone(1320, 'sine',    0.10, 0.10, 0.06);
-  }
-
-  function soundMove() {
-    // Very subtle tick
-    playTone(200, 'square', 0.04, 0.04);
-  }
-
-  function soundDie() {
-    // Descending thud
-    playTone(320, 'sawtooth', 0.15, 0.18);
-    playTone(200, 'sawtooth', 0.18, 0.18, 0.12);
-    playTone(100, 'sawtooth', 0.25, 0.18, 0.26);
-  }
-
-  function soundStart() {
-    // Ascending fanfare
-    playTone(440,  'sine', 0.10, 0.12);
-    playTone(550,  'sine', 0.10, 0.12, 0.10);
-    playTone(660,  'sine', 0.10, 0.12, 0.20);
-    playTone(880,  'sine', 0.14, 0.14, 0.32);
-  }
-
-  function soundNewBest() {
-    // Triumphant jingle
-    playTone(660,  'sine', 0.10, 0.15);
-    playTone(880,  'sine', 0.10, 0.15, 0.10);
-    playTone(1100, 'sine', 0.10, 0.15, 0.20);
-    playTone(1320, 'sine', 0.16, 0.18, 0.32);
-  }
-
-  // ── Snake Game ──
-function initSnake() {
-  const canvas   = document.getElementById('snake-canvas');
-  const ctx      = canvas.getContext('2d');
-
-  // Responsive canvas size
-  const isMobile = window.innerWidth <= 768;
-  const size     = isMobile ? 240 : 300;
-  canvas.width   = size;
-  canvas.height  = size;
-
-    const scoreEl  = document.getElementById('snake-score');
-    const bestEl   = document.getElementById('snake-best');
-    const startBtn = document.getElementById('snake-start-btn');
-    const GRID     = 15;
-    const COLS     = Math.floor(canvas.width  / GRID);
-    const ROWS     = Math.floor(canvas.height / GRID);
-    const GOLD     = '#FFD700';
-    const GOLD_DIM = '#B8960C';
-    const FOOD_COL = '#ff6b6b';
-
+  function initSnake() {
+    const canvas  = document.getElementById('snake-canvas');
+    const ctx     = canvas.getContext('2d');
+    const isMob   = window.innerWidth <= 768;
+    const size    = isMob ? 240 : 300;
+    canvas.width  = size; canvas.height = size;
+    const scoreEl = document.getElementById('snake-score');
+    const bestEl  = document.getElementById('snake-best');
+    const startBtn= document.getElementById('snake-start-btn');
+    const GRID    = 15;
+    const COLS    = Math.floor(canvas.width / GRID);
+    const ROWS    = Math.floor(canvas.height / GRID);
+    const GOLD    = '#FFD700', GOLD_DIM = '#B8960C', FOOD_COL = '#ff6b6b';
     let snake, dir, nextDir, food, score, best, loop, running;
-
     best = parseInt(localStorage.getItem('ns_snake_best') || '0');
     bestEl.textContent = best;
 
-    function reset() {
-      snake   = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }];
-      dir     = { x: 1, y: 0 };
-      nextDir = { x: 1, y: 0 };
-      score   = 0;
-      scoreEl.textContent = 0;
-      placeFood();
-    }
-
-    function placeFood() {
-      let pos;
-      do {
-        pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
-      } while (snake.some(s => s.x === pos.x && s.y === pos.y));
-      food = pos;
-    }
-
-    function drawRect(x, y, color, radius) {
-      radius = radius || 3;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(x * GRID + 1, y * GRID + 1, GRID - 2, GRID - 2, radius);
-      ctx.fill();
-    }
-
+    function reset() { snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}]; dir={x:1,y:0}; nextDir={x:1,y:0}; score=0; scoreEl.textContent=0; placeFood(); }
+    function placeFood() { let pos; do { pos={x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)}; } while(snake.some(s=>s.x===pos.x&&s.y===pos.y)); food=pos; }
+    function drawRect(x,y,color,radius) { radius=radius||3; ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(x*GRID+1,y*GRID+1,GRID-2,GRID-2,radius); ctx.fill(); }
     function draw() {
-      ctx.fillStyle = '#07060A';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = 'rgba(184,150,12,0.08)';
-      for (let x = 0; x < COLS; x++) {
-        for (let y = 0; y < ROWS; y++) {
-          ctx.beginPath();
-          ctx.arc(x * GRID + GRID / 2, y * GRID + GRID / 2, 1, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
-      ctx.shadowColor = FOOD_COL;
-      ctx.shadowBlur  = 8;
-      drawRect(food.x, food.y, FOOD_COL, 6);
-      ctx.shadowBlur  = 0;
-
-      snake.forEach((seg, i) => {
-        const isHead = i === 0;
-        ctx.shadowColor = isHead ? GOLD : 'transparent';
-        ctx.shadowBlur  = isHead ? 10 : 0;
-        drawRect(seg.x, seg.y, isHead ? GOLD : GOLD_DIM, isHead ? 5 : 3);
-        ctx.shadowBlur  = 0;
-      });
+      ctx.fillStyle='#07060A'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(184,150,12,0.08)';
+      for(let x=0;x<COLS;x++) for(let y=0;y<ROWS;y++) { ctx.beginPath(); ctx.arc(x*GRID+GRID/2,y*GRID+GRID/2,1,0,Math.PI*2); ctx.fill(); }
+      ctx.shadowColor=FOOD_COL; ctx.shadowBlur=8; drawRect(food.x,food.y,FOOD_COL,6); ctx.shadowBlur=0;
+      snake.forEach((seg,i)=>{ const isHead=i===0; ctx.shadowColor=isHead?GOLD:'transparent'; ctx.shadowBlur=isHead?10:0; drawRect(seg.x,seg.y,isHead?GOLD:GOLD_DIM,isHead?5:3); ctx.shadowBlur=0; });
     }
-
-    function drawMessage(title, sub) {
-      ctx.fillStyle = 'rgba(7,6,10,0.82)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = GOLD;
-      ctx.font = "bold 18px 'Cinzel', serif";
-      ctx.textAlign = 'center';
-      ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 16);
-      ctx.fillStyle = GOLD_DIM;
-      ctx.font = "13px 'EB Garamond', serif";
-      ctx.fillText(sub, canvas.width / 2, canvas.height / 2 + 12);
-      ctx.textAlign = 'left';
-    }
-
+    function drawMessage(title,sub) { ctx.fillStyle='rgba(7,6,10,0.82)'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle=GOLD; ctx.font="bold 18px 'Cinzel',serif"; ctx.textAlign='center'; ctx.fillText(title,canvas.width/2,canvas.height/2-16); ctx.fillStyle=GOLD_DIM; ctx.font="13px 'EB Garamond',serif"; ctx.fillText(sub,canvas.width/2,canvas.height/2+12); ctx.textAlign='left'; }
     function tick() {
-      dir = { ...nextDir };
-      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
-
-      if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) return gameOver();
-      if (snake.some(s => s.x === head.x && s.y === head.y)) return gameOver();
-
+      dir={...nextDir}; const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+      if(head.x<0||head.x>=COLS||head.y<0||head.y>=ROWS) return gameOver();
+      if(snake.some(s=>s.x===head.x&&s.y===head.y)) return gameOver();
       snake.unshift(head);
-
-      if (head.x === food.x && head.y === food.y) {
-        score++;
-        scoreEl.textContent = score;
-        if (score > best) {
-          best = score;
-          bestEl.textContent = best;
-          localStorage.setItem('ns_snake_best', best);
-          soundNewBest();
-        } else {
-          soundEat();
-        }
-        placeFood();
-      } else {
-        snake.pop();
-        soundMove();
-      }
-
+      if(head.x===food.x&&head.y===food.y) { score++; scoreEl.textContent=score; if(score>best){best=score;bestEl.textContent=best;localStorage.setItem('ns_snake_best',best);soundNewBest();}else soundEat(); placeFood(); } else { snake.pop(); soundMove(); }
       draw();
     }
-
-    function gameOver() {
-      clearInterval(loop);
-      running = false;
-      soundDie();
-      draw();
-      drawMessage('Game Over', 'Score: ' + score + ' — Press Start to retry');
-      startBtn.textContent = 'Play Again';
-    }
-
-    function startGame() {
-      if (running) return;
-      running = true;
-      reset();
-      draw();
-      soundStart();
-      startBtn.textContent = 'Restart';
-      clearInterval(loop);
-      loop = setInterval(tick, 120);
-    }
-
-    startBtn.onclick = () => {
-      clearInterval(loop);
-      running = false;
-      startGame();
-    };
-
+    function gameOver() { clearInterval(loop); running=false; soundDie(); draw(); drawMessage('Game Over','Score: '+score+' — Press Start to retry'); startBtn.textContent='Play Again'; }
+    function startGame() { if(running)return; running=true; reset(); draw(); soundStart(); startBtn.textContent='Restart'; clearInterval(loop); loop=setInterval(tick,120); }
+    startBtn.onclick = () => { clearInterval(loop); running=false; startGame(); };
     document.addEventListener('keydown', e => {
-      if (!running) return;
-      const map = {
-        ArrowUp:    { x:  0, y: -1 }, w: { x:  0, y: -1 }, W: { x:  0, y: -1 },
-        ArrowDown:  { x:  0, y:  1 }, s: { x:  0, y:  1 }, S: { x:  0, y:  1 },
-        ArrowLeft:  { x: -1, y:  0 }, a: { x: -1, y:  0 }, A: { x: -1, y:  0 },
-        ArrowRight: { x:  1, y:  0 }, d: { x:  1, y:  0 }, D: { x:  1, y:  0 },
-      };
-      const newDir = map[e.key];
-      if (!newDir) return;
-      if (newDir.x === -dir.x && newDir.y === -dir.y) return;
-      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
-      nextDir = newDir;
+      if(!running) return;
+      const map={ArrowUp:{x:0,y:-1},w:{x:0,y:-1},W:{x:0,y:-1},ArrowDown:{x:0,y:1},s:{x:0,y:1},S:{x:0,y:1},ArrowLeft:{x:-1,y:0},a:{x:-1,y:0},A:{x:-1,y:0},ArrowRight:{x:1,y:0},d:{x:1,y:0},D:{x:1,y:0}};
+      const newDir=map[e.key]; if(!newDir)return; if(newDir.x===-dir.x&&newDir.y===-dir.y)return;
+      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+      nextDir=newDir;
     });
-
-    document.getElementById('snake-up').onclick    = () => { if (dir.y !==  1) nextDir = { x:  0, y: -1 }; };
-    document.getElementById('snake-down').onclick  = () => { if (dir.y !== -1) nextDir = { x:  0, y:  1 }; };
-    document.getElementById('snake-left').onclick  = () => { if (dir.x !==  1) nextDir = { x: -1, y:  0 }; };
-    document.getElementById('snake-right').onclick = () => { if (dir.x !== -1) nextDir = { x:  1, y:  0 }; };
-
-    drawMessage('NoteShelf Snake', 'Press Start to play');
+    document.getElementById('snake-up').onclick    = () => { if(dir.y!== 1) nextDir={x:0,y:-1}; };
+    document.getElementById('snake-down').onclick  = () => { if(dir.y!==-1) nextDir={x:0,y: 1}; };
+    document.getElementById('snake-left').onclick  = () => { if(dir.x!== 1) nextDir={x:-1,y:0}; };
+    document.getElementById('snake-right').onclick = () => { if(dir.x!==-1) nextDir={x: 1,y:0}; };
+    drawMessage('NoteShelf Snake','Press Start to play');
   }
 
   function updateOverlay(isDown) {
-    if (isFounder()) {
-      overlay.style.display = 'none';
-      return;
-    }
+    if (isFounder()) { overlay.style.display='none'; return; }
     overlay.style.display = isDown ? 'flex' : 'none';
     if (isDown) initSnake();
   }
 
-  db.ref("siteStatus/isDown").on("value", snap => {
-    updateOverlay(snap.val() === true);
-  });
-
-  window.addEventListener("ns_login", () => {
-    db.ref("siteStatus/isDown").once("value").then(snap => {
-      updateOverlay(snap.val() === true);
-    });
-  });
-
-  window.addEventListener("ns_logout", () => {
-    db.ref("siteStatus/isDown").once("value").then(snap => {
-      updateOverlay(snap.val() === true);
-    });
-  });
+  db.ref("siteStatus/isDown").on("value", snap => { updateOverlay(snap.val() === true); });
+  window.addEventListener("ns_login",  () => db.ref("siteStatus/isDown").once("value").then(snap => updateOverlay(snap.val()===true)));
+  window.addEventListener("ns_logout", () => db.ref("siteStatus/isDown").once("value").then(snap => updateOverlay(snap.val()===true)));
 })();
+
 document.addEventListener('DOMContentLoaded', () => {
   const sequence = ['q','p','w','o','e','i','r','u','t','y'];
-  let index = 0;
-  let timer = null;
-
+  let index = 0, timer = null;
   document.addEventListener('keydown', e => {
     if (e.key.toLowerCase() === sequence[index]) {
       index++;
       clearTimeout(timer);
       timer = setTimeout(() => { index = 0; }, 2000);
-
       if (index === sequence.length) {
-        index = 0;
-        clearTimeout(timer);
+        index = 0; clearTimeout(timer);
         if (!me()) {
           const authPopup = document.getElementById('auth-popup');
           const authTitle = document.getElementById('auth-title');
-          if (authPopup && authTitle) {
-            authTitle.textContent = 'Log In';
-            authPopup.style.display = 'flex';
-          }
+          if (authPopup && authTitle) { authTitle.textContent = 'Log In'; authPopup.style.display = 'flex'; }
         }
       }
-    } else {
-      index = 0;
-      clearTimeout(timer);
-    }
+    } else { index = 0; clearTimeout(timer); }
   });
 });
