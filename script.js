@@ -2521,9 +2521,69 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.appendChild(stack);
 
+  // ── Event overlay (nyan / oiia cat) ──
+  function playEventOverlay(type) {
+    const old = document.getElementById("event-cat-overlay");
+    if (old) old.remove();
+
+    const urls = {
+      nyan: "https://tenor.com/uX4ZQb9N3Fi.gif",
+      oiia: "https://tenor.com/uSUaf7lw8uj.gif",
+    };
+
+    // detect which cat from text
+    let catUrl = null;
+    if (type && type.toLowerCase().includes("nyan")) catUrl = urls.nyan;
+    else if (type && (type.toLowerCase().includes("oiia") || type.toLowerCase().includes("cat"))) catUrl = urls.oiia;
+    else catUrl = urls.nyan; // default
+
+    const overlay = document.createElement("div");
+    overlay.id = "event-cat-overlay";
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99997;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(5,4,10,0.75);backdrop-filter:blur(4px);
+      animation:eventFadeIn 0.3s ease;
+      pointer-events:auto;
+    `;
+    overlay.innerHTML = `
+      <style>
+        @keyframes eventFadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes eventFadeOut { from{opacity:1} to{opacity:0} }
+        @keyframes catBounce { 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.06) rotate(2deg)} }
+        #event-cat-img {
+          width:min(380px,80vw);
+          border-radius:20px;
+          border:2px solid rgba(255,215,0,0.5);
+          box-shadow:0 0 60px rgba(255,215,0,0.2);
+          animation:catBounce 0.6s ease infinite;
+          cursor:pointer;
+        }
+        #event-close-hint {
+          position:absolute;bottom:28px;
+          font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;
+          color:rgba(255,215,0,0.45);text-transform:uppercase;
+          animation:catBounce 1.2s ease infinite;
+        }
+      </style>
+      <img id="event-cat-img" src="${catUrl}" alt="event" />
+      <div id="event-close-hint">Click anywhere to close</div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    function closeOverlay() {
+      overlay.style.animation = "eventFadeOut 0.3s ease forwards";
+      setTimeout(() => overlay.remove(), 300);
+    }
+
+    overlay.onclick = closeOverlay;
+    setTimeout(closeOverlay, 10000);
+  }
+
   const ICONS = {
-    announcement: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>`,
-    event: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`,
+    announcement: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>`,
+    event: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`,
   };
   const LABELS = { announcement: "ANNOUNCEMENT", event: "EVENT" };
   const COLORS = {
@@ -2532,12 +2592,16 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const seen = new Set();
+  let startTime = Date.now();
 
-  db.ref("admin_broadcasts").limitToLast(1).on("child_added", snap => {
+  db.ref("admin_broadcasts").orderByChild("sentAt").startAt(startTime).on("child_added", snap => {
     if (seen.has(snap.key)) return;
     seen.add(snap.key);
     const data = snap.val();
     if (!data || !data.text) return;
+
+    // play cat overlay for events
+    if (data.type === "event") playEventOverlay(data.text);
 
     const c = COLORS[data.type] || COLORS.announcement;
     const toast = document.createElement("div");
@@ -2554,27 +2618,26 @@ document.addEventListener('DOMContentLoaded', () => {
       transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1),transform 0.3s cubic-bezier(0.4,0,0.2,1);
     `;
 
-    // Avatar
     const av = document.createElement("div");
     av.style.cssText = `width:36px;height:36px;border-radius:50%;flex-shrink:0;overflow:hidden;border:1px solid ${c.border};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:${c.accent};background:rgba(255,255,255,0.05);`;
     if (data.avatar) {
       const img = document.createElement("img");
-      img.src = data.avatar; img.style.cssText = "width:100%;height:100%;object-fit:cover;";
+      img.src = data.avatar;
+      img.style.cssText = "width:100%;height:100%;object-fit:cover;";
       img.onerror = () => { av.innerHTML = ""; av.textContent = (data.sentBy||"A").charAt(0).toUpperCase(); };
       av.appendChild(img);
     } else {
       av.textContent = (data.sentBy||"A").charAt(0).toUpperCase();
     }
 
-    // Body
     const body = document.createElement("div");
     body.style.cssText = "flex:1;min-width:0;";
 
     const header = document.createElement("div");
-    header.style.cssText = "display:flex;align-items:center;gap:7px;margin-bottom:5px;";
+    header.style.cssText = "display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap;";
 
     const labelPill = document.createElement("span");
-    labelPill.style.cssText = `font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;font-weight:700;color:${c.accent};background:rgba(255,255,255,0.05);border:1px solid ${c.border};border-radius:20px;padding:2px 9px;display:flex;align-items:center;gap:5px;`;
+    labelPill.style.cssText = `font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;font-weight:700;color:${c.accent};background:rgba(255,255,255,0.05);border:1px solid ${c.border};border-radius:20px;padding:2px 9px;display:inline-flex;align-items:center;gap:5px;`;
     labelPill.innerHTML = ICONS[data.type] + (LABELS[data.type] || "MESSAGE");
 
     const sender = document.createElement("span");
@@ -2591,17 +2654,17 @@ document.addEventListener('DOMContentLoaded', () => {
     body.appendChild(header);
     body.appendChild(msg);
 
-    // Close
     const closeBtn = document.createElement("button");
-    closeBtn.style.cssText = `width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(240,230,202,0.4);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;pointer-events:auto;`;
+    closeBtn.style.cssText = `width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(240,230,202,0.4);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;pointer-events:auto;transition:all 0.2s;`;
     closeBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    closeBtn.onmouseover = () => { closeBtn.style.borderColor = "rgba(255,107,107,0.5)"; closeBtn.style.color = "#ff6b6b"; };
+    closeBtn.onmouseout  = () => { closeBtn.style.borderColor = "rgba(255,255,255,0.12)"; closeBtn.style.color = "rgba(240,230,202,0.4)"; };
 
     toast.appendChild(av);
     toast.appendChild(body);
     toast.appendChild(closeBtn);
     stack.appendChild(toast);
 
-    // Animate in
     requestAnimationFrame(() => {
       toast.style.opacity = "1";
       toast.style.transform = "translateY(0) scale(1)";
