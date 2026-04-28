@@ -1263,8 +1263,6 @@ document.addEventListener("DOMContentLoaded", () => {
           🟢 SITE IS UP
         </button>
       </div>
-      // Add this inside buildBanAdminPanel(), before the closing </div> of panel.innerHTML
-// Insert after the site-status section:
       <div style="border-top:1px solid #2A2638;padding-top:14px;margin-top:14px;">
         <label style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#B8960C;opacity:0.75;display:block;margin-bottom:5px;">Global Announcement</label>
         <textarea id="admin-announce-input" placeholder="Type announcement…" maxlength="200" rows="3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #2A2638;background:#0D0B12;color:#F0E6CA;font-family:'EB Garamond',serif;font-size:14px;outline:none;margin-bottom:8px;display:block;box-sizing:border-box;resize:none;"></textarea>
