@@ -58,6 +58,57 @@ const categorySVGs = {
 };
 
 // =====================================
+// HUMAN CAPTCHA SYSTEM
+// =====================================
+const CAPTCHA_CHALLENGES = [
+  () => { const a=Math.floor(Math.random()*9)+1, b=Math.floor(Math.random()*9)+1; return { q: `${a}  +  ${b}  =  ?`, a: String(a+b) }; },
+  () => { const a=Math.floor(Math.random()*5)+5, b=Math.floor(Math.random()*5)+1; return { q: `${a}  −  ${b}  =  ?`, a: String(a-b) }; },
+  () => { const a=Math.floor(Math.random()*9)+2, b=Math.floor(Math.random()*5)+2; return { q: `${a}  ×  ${b}  =  ?`, a: String(a*b) }; },
+  () => {
+    const words = ['GOLD','FIRE','MOON','STAR','DUSK','NOVA','JADE','MIST','DAWN'];
+    const w = words[Math.floor(Math.random()*words.length)];
+    return { q: `Type: ${w}`, a: w };
+  },
+  () => {
+    const shapes = [
+      { q: 'How many sides does a triangle have?', a: '3' },
+      { q: 'How many sides does a hexagon have?', a: '6' },
+      { q: 'How many sides does a square have?', a: '4' },
+      { q: 'What is 2 to the power of 3?', a: '8' },
+    ];
+    return shapes[Math.floor(Math.random()*shapes.length)];
+  },
+];
+
+let _captchaAnswer = '';
+
+function generateCaptcha() {
+  const gen = CAPTCHA_CHALLENGES[Math.floor(Math.random()*CAPTCHA_CHALLENGES.length)];
+  const { q, a } = gen();
+  _captchaAnswer = a.toUpperCase();
+  const challengeEl = document.getElementById('captcha-challenge');
+  const inputEl     = document.getElementById('captcha-input');
+  const statusEl    = document.getElementById('captcha-status');
+  if (challengeEl) challengeEl.textContent = q;
+  if (inputEl)     inputEl.value = '';
+  if (statusEl)    { statusEl.textContent = ''; statusEl.className = 'captcha-status'; }
+}
+
+function verifyCaptcha() {
+  const inputEl  = document.getElementById('captcha-input');
+  const statusEl = document.getElementById('captcha-status');
+  if (!inputEl) return false;
+  const val = inputEl.value.trim().toUpperCase();
+  if (val === _captchaAnswer) {
+    if (statusEl) { statusEl.textContent = '✓ Verified'; statusEl.className = 'captcha-status captcha-ok'; }
+    return true;
+  }
+  if (statusEl) { statusEl.textContent = '✗ Incorrect — try again'; statusEl.className = 'captcha-status captcha-err'; }
+  generateCaptcha();
+  return false;
+}
+
+// =====================================
 // TRAILER POPUP
 // =====================================
 const trailerPopup = document.createElement("div");
@@ -612,7 +663,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const authBox = document.getElementById("auth-box");
   authBox.insertBefore(authEmailWrap, authUsername);
+// — insert right after the authEmailWrap insertion —
+const captchaWrap = document.createElement('div');
+captchaWrap.id = 'captcha-wrap';
+captchaWrap.innerHTML = `
+  <div id="captcha-box">
+    <span id="captcha-label">Human Verification</span>
+    <div id="captcha-challenge"></div>
+    <input id="captcha-input" type="text" placeholder="Your answer…" maxlength="10" autocomplete="off"/>
+    <div id="captcha-status"></div>
+    <button id="captcha-refresh" type="button">↻ New challenge</button>
+  </div>
+`;
+// insert before the submit button
+authSubmit.parentNode.insertBefore(captchaWrap, authSubmit);
 
+document.getElementById('captcha-refresh').onclick = generateCaptcha;
+  
   const pwToggleBtn = document.createElement("button");
   pwToggleBtn.type  = "button";
   pwToggleBtn.id    = "pw-toggle";
@@ -929,6 +996,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pwWrap.parentNode.insertBefore(suggestBtn, pwWrap.nextSibling);
     }
     suggestBtn.style.display = isLogin ? "none" : "inline-flex";
+    generateCaptcha();
   }
 
   signupBtn && signupBtn.addEventListener("click", () => openAuth("Sign Up"));
@@ -948,6 +1016,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   authSubmit && authSubmit.addEventListener("click", async () => {
+    if (!verifyCaptcha()) { authMessage.textContent = '❌ Please complete the human verification'; return; }
+    
     const username = authUsername.value.trim();
     const password = authPassword.value.trim();
     const email    = authEmail.value.trim();
