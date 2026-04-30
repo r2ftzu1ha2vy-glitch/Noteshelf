@@ -765,6 +765,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Escape" && gameViewer.style.display === "flex") closeViewer();
   });
 
+  // Patch game viewer to emit quest events
+viewerCloseBtn.addEventListener("click", () => {
+  document.dispatchEvent(new CustomEvent("ns_game_closed"));
+});
+
+const _origLoadGame = loadGameInViewer;
+// Re-assign so the global ref also updates
+window.__ns_loadGame = function(game) {
+  document.dispatchEvent(new CustomEvent("ns_game_opened", { detail: { name: game.name } }));
+  return _origLoadGame(game);
+};
+
   function createGameButton(game) {
     const user   = me();
     const locked = !user && !freeGames.has(game.name);
@@ -3205,7 +3217,10 @@ function showProfileModal() {
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,215,0,0.06);">
           <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:${done ? '#2ecc71':'#B8960C'};min-width:52px;">Lv.${rl}</span>
           <span style="font-family:'EB Garamond',serif;font-size:13px;color:${done ? '#F0E6CA':'rgba(240,230,202,0.4)'};flex:1;">${gameList.join(", ")}</span>
-          <span style="font-size:14px;">${done ? '✅' : '🔒'}</span>
+          ${done
+  ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
+  : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(184,150,12,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+}
         </div>
       `;
     }
@@ -3374,9 +3389,19 @@ function buildQuestPanel() {
     box-shadow:0 0 18px rgba(255,215,0,0.12),0 4px 16px rgba(0,0,0,0.55);
     transition:all 0.28s ease;
   `;
-  questBtn.innerHTML = "📋";
-  questBtn.onmouseover = () => { questBtn.style.background = "linear-gradient(135deg,#FFD700,#D4A017)"; questBtn.style.boxShadow="0 0 30px rgba(255,215,0,0.4)"; questBtn.style.transform="scale(1.1)"; };
-  questBtn.onmouseout = () => { questBtn.style.background = "linear-gradient(135deg,#141219,#0D0B12)"; questBtn.style.boxShadow="0 0 18px rgba(255,215,0,0.12),0 4px 16px rgba(0,0,0,0.55)"; questBtn.style.transform="scale(1)"; };
+  questBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>`;
+questBtn.onmouseover = () => {
+  questBtn.style.background = "linear-gradient(135deg,#FFD700,#D4A017)";
+  questBtn.style.boxShadow = "0 0 30px rgba(255,215,0,0.4)";
+  questBtn.style.transform = "scale(1.1)";
+  questBtn.querySelector("svg").setAttribute("stroke","#07060A");
+};
+questBtn.onmouseout = () => {
+  questBtn.style.background = "linear-gradient(135deg,#141219,#0D0B12)";
+  questBtn.style.boxShadow = "0 0 18px rgba(255,215,0,0.12),0 4px 16px rgba(0,0,0,0.55)";
+  questBtn.style.transform = "scale(1)";
+  questBtn.querySelector("svg").setAttribute("stroke","#FFD700");
+};
   document.body.appendChild(questBtn);
 
   // Quest panel
@@ -3418,7 +3443,7 @@ function updateQuestUI() {
   panel.innerHTML = `
     <div style="padding:14px 16px 10px;border-bottom:1px solid rgba(184,150,12,0.2);background:linear-gradient(135deg,rgba(255,215,0,0.07),rgba(255,215,0,0.02));display:flex;align-items:center;justify-content:space-between;">
       <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:16px;">📋</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-3"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/></svg>
         <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#FFD700;font-weight:700;">Daily Quests</span>
       </div>
       <span style="font-size:10px;letter-spacing:1px;color:#B8960C;">${completedCount}/${quests.length} done</span>
@@ -3436,10 +3461,15 @@ function updateQuestUI() {
         const secs = remaining % 60;
 
         return `
-          <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,215,0,${completed?'0.35':'0.1'});border-radius:12px;padding:10px 12px;">
+          <div style="background:rgba(255,255,255,0.03);border:1px solid ${completed ? 'rgba(46,204,113,0.35)' : isActive ? 'rgba(255,215,0,0.2)' : 'rgba(255,215,0,0.08)'};border-radius:12px;padding:10px 12px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
               <span style="font-size:10px;letter-spacing:0.5px;color:${completed?'#2ecc71':'#F0E6CA'};font-family:'EB Garamond',serif;font-size:13px;line-height:1.3;">${q.label}</span>
-              ${completed ? '<span style="font-size:14px;">✅</span>' : isActive ? '<span style="font-size:11px;color:#FFD700;animation:luShine 1s infinite;">⏱</span>' : '<span style="font-size:14px;opacity:0.35;">⬜</span>'}
+              ${completed
+  ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
+  : isActive
+  ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
+  : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(184,150,12,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+}
             </div>
             <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-bottom:4px;">
               <div style="height:100%;width:${pct}%;background:${completed?'linear-gradient(90deg,#2ecc71,#27ae60)':'linear-gradient(90deg,#B8960C,#FFD700)'};border-radius:3px;transition:width 0.5s;"></div>
@@ -3461,7 +3491,8 @@ function updateQuestUI() {
 // Refresh quest UI every second while panel is open
 setInterval(() => {
   const panel = document.getElementById("quest-panel");
-  if (panel && panel.style.display !== "none") updateQuestUI();
+  if (!panel || panel.style.display === "none") return;
+  updateQuestUI();
 }, 1000);
 
 // ── Hook into game load/close ──
