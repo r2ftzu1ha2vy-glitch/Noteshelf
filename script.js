@@ -2535,58 +2535,341 @@ document.addEventListener('DOMContentLoaded', () => {
     const old = document.getElementById("event-cat-overlay");
     if (old) old.remove();
 
-    const urls = {
-      nyan: "https://tenor.com/uX4ZQb9N3Fi.gif",
-      oiia: "https://tenor.com/uSUaf7lw8uj.gif",
-    };
+    const isNyan = type && type.toLowerCase().includes("nyan");
+    const isOiia = type && (type.toLowerCase().includes("oiia") || type.toLowerCase().includes("cat"));
 
-    let catUrl = null;
-    if (type && type.toLowerCase().includes("nyan")) catUrl = urls.nyan;
-    else if (type && (type.toLowerCase().includes("oiia") || type.toLowerCase().includes("cat"))) catUrl = urls.oiia;
-    else catUrl = urls.nyan;
+    if (isNyan) {
+      playNyanEvent();
+    } else if (isOiia) {
+      playOiiaEvent();
+    } else {
+      playNyanEvent(); // default
+    }
+  }
 
+  // ── NYAN CAT: flies left→right, XP coins drop, catch them ──
+  function playNyanEvent() {
     const overlay = document.createElement("div");
     overlay.id = "event-cat-overlay";
     overlay.style.cssText = `
       position:fixed;inset:0;z-index:99997;
-      display:flex;align-items:center;justify-content:center;
-      background:rgba(5,4,10,0.75);backdrop-filter:blur(4px);
+      background:rgba(5,4,10,0.82);backdrop-filter:blur(3px);
+      pointer-events:auto;overflow:hidden;
       animation:eventFadeIn 0.3s ease;
-      pointer-events:auto;
     `;
     overlay.innerHTML = `
       <style>
-        @keyframes eventFadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes eventFadeIn { from{opacity:0} to{opacity:1} }
         @keyframes eventFadeOut { from{opacity:1} to{opacity:0} }
-        @keyframes catBounce { 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.06) rotate(2deg)} }
-        #event-cat-img {
-          width:min(380px,80vw);
-          border-radius:20px;
-          border:2px solid rgba(255,215,0,0.5);
-          box-shadow:0 0 60px rgba(255,215,0,0.2);
-          animation:catBounce 0.6s ease infinite;
-          cursor:pointer;
+        @keyframes nyanFly {
+          0%   { left:-260px; }
+          100% { left:calc(100vw + 20px); }
         }
-        #event-close-hint {
-          position:absolute;bottom:28px;
-          font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;
-          color:rgba(255,215,0,0.45);text-transform:uppercase;
-          animation:catBounce 1.2s ease infinite;
+        @keyframes rainbowTrail {
+          0%   { opacity:1; }
+          100% { opacity:0; transform:scaleX(0); }
+        }
+        @keyframes coinFall {
+          0%   { transform:translateY(0) rotate(0deg) scale(1); opacity:1; }
+          80%  { opacity:1; }
+          100% { transform:translateY(320px) rotate(720deg) scale(0.5); opacity:0; }
+        }
+        @keyframes coinPop {
+          0%   { transform:scale(1); }
+          50%  { transform:scale(1.6); }
+          100% { transform:scale(0); opacity:0; }
+        }
+        #nyan-cat-wrap {
+          position:absolute;
+          top:38%;
+          left:-260px;
+          display:flex;align-items:center;
+          animation:nyanFly 3.8s linear forwards;
+          pointer-events:none;
+          z-index:2;
+        }
+        #nyan-rainbow {
+          width:200px;height:80px;
+          background:linear-gradient(180deg,
+            #ff0000 0%,#ff0000 16.6%,
+            #ff8800 16.6%,#ff8800 33.2%,
+            #ffff00 33.2%,#ffff00 49.8%,
+            #00cc00 49.8%,#00cc00 66.4%,
+            #0066ff 66.4%,#0066ff 83%,
+            #9933ff 83%,#9933ff 100%);
+          border-radius:0 0 0 8px;
+          flex-shrink:0;
+          transform-origin:right center;
+        }
+        #nyan-gif {
+          width:160px;height:120px;
+          object-fit:contain;
+          flex-shrink:0;
+          image-rendering:pixelated;
+        }
+        .nyan-hint {
+          position:fixed;top:20px;left:50%;transform:translateX(-50%);
+          font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;
+          color:#FFD700;text-transform:uppercase;
+          text-shadow:0 0 20px rgba(255,215,0,0.8);
+          z-index:3;pointer-events:none;
+          animation:eventFadeIn 0.5s ease;
+        }
+        .xp-coin {
+          position:fixed;
+          font-size:28px;
+          cursor:pointer;
+          z-index:4;
+          animation:coinFall 2.2s ease-in forwards;
+          user-select:none;
+          filter:drop-shadow(0 0 8px rgba(255,215,0,0.9));
+          transition:transform 0.1s;
+        }
+        .xp-coin:hover { filter:drop-shadow(0 0 16px #FFD700); }
+        .xp-score-pop {
+          position:fixed;
+          font-family:'Cinzel Decorative',serif;
+          font-size:18px;font-weight:900;
+          color:#FFD700;
+          text-shadow:0 0 20px rgba(255,215,0,0.9);
+          pointer-events:none;
+          z-index:5;
+          animation:coinPop 0.6s ease forwards;
+        }
+        #nyan-xp-counter {
+          position:fixed;top:20px;right:28px;
+          font-family:'Cinzel Decorative',serif;
+          font-size:16px;color:#FFD700;
+          background:rgba(7,6,10,0.85);
+          border:1px solid rgba(255,215,0,0.5);
+          border-radius:20px;padding:8px 18px;
+          z-index:3;pointer-events:none;
+          text-shadow:0 0 10px rgba(255,215,0,0.5);
+        }
+        #nyan-timer-bar {
+          position:fixed;bottom:0;left:0;right:0;height:5px;
+          background:rgba(255,255,255,0.08);z-index:3;pointer-events:none;
+        }
+        #nyan-timer-fill {
+          height:100%;
+          background:linear-gradient(90deg,#ff0000,#ff8800,#ffff00,#00cc00,#0066ff,#9933ff);
+          transition:width 0.1s linear;
         }
       </style>
-      <img id="event-cat-img" src="${catUrl}" alt="event" />
-      <div id="event-close-hint">Click anywhere to close</div>
+      <div class="nyan-hint">⭐ Catch the XP coins! ⭐</div>
+      <div id="nyan-xp-counter">0 XP caught</div>
+      <div id="nyan-cat-wrap">
+        <div id="nyan-rainbow"></div>
+        <img id="nyan-gif" src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcms5Zjhhb2s3bWtlbnppZnZvMHFzNGJldXN3dWQ4czgwNjV4N3JhOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7lsw8RenVcjCM/giphy.gif" alt="Nyan Cat"/>
+      </div>
+      <div id="nyan-timer-bar"><div id="nyan-timer-fill" style="width:100%"></div></div>
     `;
-
     document.body.appendChild(overlay);
 
-    function closeOverlay() {
-      overlay.style.animation = "eventFadeOut 0.3s ease forwards";
-      setTimeout(() => overlay.remove(), 300);
-    }
+    let caughtXP = 0;
+    let totalCoins = 0;
+    const counter = overlay.querySelector("#nyan-xp-counter");
+    const timerFill = overlay.querySelector("#nyan-timer-fill");
+    const DURATION = 15000; // 15 seconds
+    const start = Date.now();
 
-    overlay.onclick = closeOverlay;
-    setTimeout(closeOverlay, 10000);
+    // Drop coins at intervals
+    const coinInterval = setInterval(() => {
+      if (!document.getElementById("event-cat-overlay")) { clearInterval(coinInterval); return; }
+      const coin = document.createElement("div");
+      coin.className = "xp-coin";
+      coin.textContent = "⭐";
+      coin.style.left = (12 + Math.random() * 76) + "vw";
+      coin.style.top = (8 + Math.random() * 30) + "vh";
+      const xpVal = [5,5,5,10,10,20][Math.floor(Math.random()*6)];
+      coin.dataset.xp = xpVal;
+      totalCoins++;
+
+      coin.onclick = (e) => {
+        e.stopPropagation();
+        coin.style.animation = "coinPop 0.4s ease forwards";
+        caughtXP += xpVal;
+        counter.textContent = caughtXP + " XP caught";
+
+        const pop = document.createElement("div");
+        pop.className = "xp-score-pop";
+        pop.textContent = "+" + xpVal + " XP";
+        pop.style.left = coin.style.left;
+        pop.style.top = (parseFloat(coin.style.top) - 4) + "vh";
+        overlay.appendChild(pop);
+        setTimeout(() => { coin.remove(); pop.remove(); }, 500);
+      };
+
+      overlay.appendChild(coin);
+      setTimeout(() => { if (coin.parentNode) coin.remove(); }, 2500);
+    }, 600);
+
+    // Timer bar
+    const timerInterval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.max(0, 100 - (elapsed / DURATION * 100));
+      timerFill.style.width = pct + "%";
+      if (elapsed >= DURATION) {
+        clearInterval(timerInterval);
+        clearInterval(coinInterval);
+        // Award XP
+        if (caughtXP > 0 && me()) {
+          awardXP(caughtXP, `Nyan Cat Event: caught ${caughtXP} XP`);
+        }
+        overlay.style.animation = "eventFadeOut 0.5s ease forwards";
+        setTimeout(() => overlay.remove(), 500);
+      }
+    }, 100);
+
+    // Click backdrop to close early (awards what was caught)
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        clearInterval(timerInterval);
+        clearInterval(coinInterval);
+        if (caughtXP > 0 && me()) awardXP(caughtXP, `Nyan Cat Event: caught ${caughtXP} XP`);
+        overlay.style.animation = "eventFadeOut 0.4s ease forwards";
+        setTimeout(() => overlay.remove(), 400);
+      }
+    });
+  }
+
+  // ── OIIA CAT: click the cat to earn XP ──
+  function playOiiaEvent() {
+    const overlay = document.createElement("div");
+    overlay.id = "event-cat-overlay";
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99997;
+      background:rgba(5,4,10,0.82);backdrop-filter:blur(3px);
+      pointer-events:auto;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+      animation:eventFadeIn 0.3s ease;
+    `;
+    overlay.innerHTML = `
+      <style>
+        @keyframes eventFadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes eventFadeOut { from{opacity:1} to{opacity:0} }
+        @keyframes oiiaFloat {
+          0%,100% { transform:translateY(0px) rotate(-3deg); }
+          50%     { transform:translateY(-18px) rotate(3deg); }
+        }
+        @keyframes oiiaPop {
+          0%   { transform:scale(1); }
+          30%  { transform:scale(1.25) rotate(-6deg); }
+          60%  { transform:scale(0.92) rotate(4deg); }
+          100% { transform:scale(1) rotate(0deg); }
+        }
+        @keyframes xpFloat {
+          0%   { opacity:1; transform:translateY(0) scale(1); }
+          100% { opacity:0; transform:translateY(-80px) scale(1.3); }
+        }
+        #oiia-cat {
+          width:min(240px,55vw);
+          cursor:pointer;
+          border-radius:20px;
+          border:3px solid rgba(255,215,0,0.5);
+          box-shadow:0 0 60px rgba(255,215,0,0.3);
+          animation:oiiaFloat 1.4s ease-in-out infinite;
+          image-rendering:auto;
+          position:relative;z-index:2;
+        }
+        #oiia-cat:active { transform:scale(0.92); }
+        #oiia-info {
+          position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
+          text-align:center;pointer-events:none;z-index:3;
+        }
+        #oiia-click-count {
+          font-family:'Cinzel Decorative',serif;
+          font-size:clamp(20px,4vw,32px);color:#FFD700;
+          text-shadow:0 0 20px rgba(255,215,0,0.8);
+          margin-bottom:6px;
+        }
+        #oiia-hint {
+          font-family:'Cinzel',serif;font-size:11px;
+          letter-spacing:3px;color:rgba(255,215,0,0.55);
+          text-transform:uppercase;
+        }
+        .oiia-xp-pop {
+          position:fixed;
+          font-family:'Cinzel Decorative',serif;
+          font-size:22px;font-weight:900;color:#FFD700;
+          text-shadow:0 0 16px rgba(255,215,0,0.9);
+          pointer-events:none;z-index:5;
+          animation:xpFloat 0.9s ease-out forwards;
+        }
+        #oiia-timer-bar {
+          position:fixed;bottom:0;left:0;right:0;height:5px;
+          background:rgba(255,255,255,0.08);z-index:3;pointer-events:none;
+        }
+        #oiia-timer-fill {
+          height:100%;background:linear-gradient(90deg,#FFD700,#FF6B35);
+          transition:width 0.1s linear;
+        }
+        #oiia-close-hint {
+          position:fixed;top:18px;left:50%;transform:translateX(-50%);
+          font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;
+          color:rgba(255,215,0,0.45);text-transform:uppercase;pointer-events:none;
+        }
+      </style>
+      <div id="oiia-close-hint">Click the cat — earn XP!</div>
+      <img id="oiia-cat" src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXV1d3ZvdzYycmgwZThtNHp2cjN3NG84YWR2YW5xcDBtdWRoNWpkMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/WcloH1WbGFM22NTJnW/giphy.gif" alt="OIIA Cat"/>
+      <div id="oiia-info">
+        <div id="oiia-click-count">0 clicks</div>
+        <div id="oiia-hint">Each click = +3 XP</div>
+      </div>
+      <div id="oiia-timer-bar"><div id="oiia-timer-fill" style="width:100%"></div></div>
+    `;
+    document.body.appendChild(overlay);
+
+    let clicks = 0;
+    let totalXP = 0;
+    const cat = overlay.querySelector("#oiia-cat");
+    const clickCount = overlay.querySelector("#oiia-click-count");
+    const timerFill = overlay.querySelector("#oiia-timer-fill");
+    const DURATION = 12000;
+    const start = Date.now();
+    const XP_PER_CLICK = 3;
+
+    cat.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clicks++;
+      totalXP += XP_PER_CLICK;
+      clickCount.textContent = clicks + (clicks === 1 ? " click" : " clicks") + " · " + totalXP + " XP";
+
+      // Animate
+      cat.style.animation = "none";
+      void cat.offsetWidth;
+      cat.style.animation = "oiiaPop 0.3s ease, oiiaFloat 1.4s ease-in-out 0.3s infinite";
+
+      // XP pop at cursor
+      const pop = document.createElement("div");
+      pop.className = "oiia-xp-pop";
+      pop.textContent = "+3 ⭐";
+      pop.style.left = (e.clientX - 30) + "px";
+      pop.style.top  = (e.clientY - 20) + "px";
+      overlay.appendChild(pop);
+      setTimeout(() => pop.remove(), 950);
+    });
+
+    const timerInterval = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.max(0, 100 - (elapsed / DURATION * 100));
+      timerFill.style.width = pct + "%";
+      if (elapsed >= DURATION) {
+        clearInterval(timerInterval);
+        if (totalXP > 0 && me()) awardXP(totalXP, `OIIA Cat Event: ${clicks} clicks = ${totalXP} XP`);
+        overlay.style.animation = "eventFadeOut 0.5s ease forwards";
+        setTimeout(() => overlay.remove(), 500);
+      }
+    }, 100);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        clearInterval(timerInterval);
+        if (totalXP > 0 && me()) awardXP(totalXP, `OIIA Cat Event: ${clicks} clicks = ${totalXP} XP`);
+        overlay.style.animation = "eventFadeOut 0.4s ease forwards";
+        setTimeout(() => overlay.remove(), 400);
+      }
+    });
   }
 
   const ICONS = {
@@ -2686,4 +2969,553 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn.onclick = dismiss;
     setTimeout(dismiss, 8000);
   });
+})();
+
+// =====================================
+// XP & LEVEL SYSTEM
+// =====================================
+
+// Level thresholds — XP needed to REACH that level (cumulative)
+const LEVEL_THRESHOLDS = [
+  0,      // level 1
+  100,    // level 2
+  250,    // level 3
+  500,    // level 4
+  900,    // level 5
+  1400,   // level 6
+  2100,   // level 7
+  3000,   // level 8
+  4200,   // level 9
+  5800,   // level 10
+];
+
+// Games unlocked per level (level = index+1, level 1 = always unlocked)
+const LEVEL_UNLOCKS = {
+  1: ["Merger","Shadow Boxing","Badminton Champion","Tetricks","Build N Defend Tower","Meme Rng","Star Runner","ADventure"],
+  2: ["Square Dodge","Tap Tempo"],
+  3: ["Highway Crash","RingBound"],
+  4: ["Cosmic Duel","Pizza Panic"],
+  5: ["8-Ball Billiards","Meadow Farm"],
+  6: ["HexAsteal"],
+};
+
+function xpForLevel(lvl) { return LEVEL_THRESHOLDS[Math.min(lvl - 1, LEVEL_THRESHOLDS.length - 1)] || 0; }
+function xpForNextLevel(lvl) { return LEVEL_THRESHOLDS[Math.min(lvl, LEVEL_THRESHOLDS.length - 1)] || null; }
+
+function getLevelFromXP(xp) {
+  let lvl = 1;
+  for (let i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= LEVEL_THRESHOLDS[i]) lvl = i + 1;
+    else break;
+  }
+  return lvl;
+}
+
+function isGameUnlockedByLevel(gameName, xp) {
+  const lvl = getLevelFromXP(xp);
+  for (let [requiredLvl, gameList] of Object.entries(LEVEL_UNLOCKS)) {
+    if (gameList.includes(gameName) && lvl >= parseInt(requiredLvl)) return true;
+  }
+  return true; // default unlocked if not in any restricted list
+}
+
+function getRequiredLevel(gameName) {
+  for (let [requiredLvl, gameList] of Object.entries(LEVEL_UNLOCKS)) {
+    if (gameList.includes(gameName)) return parseInt(requiredLvl);
+  }
+  return 1;
+}
+
+// ── XP Persistence ──
+async function getUserXP(username) {
+  if (!username) return 0;
+  const snap = await db.ref("users/" + username + "/xp").once("value");
+  return snap.val() || 0;
+}
+
+async function awardXP(amount, reason) {
+  const user = me();
+  if (!user || !amount) return;
+  const snap = await db.ref("users/" + user + "/xp").once("value");
+  const oldXP = snap.val() || 0;
+  const newXP = oldXP + amount;
+  const oldLevel = getLevelFromXP(oldXP);
+  const newLevel = getLevelFromXP(newXP);
+  await db.ref("users/" + user + "/xp").set(newXP);
+  updateLevelBadge(newXP);
+  showXPToast("+" + amount + " XP" + (reason ? "  ·  " + reason : ""));
+  if (newLevel > oldLevel) {
+    setTimeout(() => showLevelUpPopup(newLevel), 600);
+  }
+}
+
+// ── Level Badge in top bar ──
+function updateLevelBadge(xp) {
+  const lvl  = getLevelFromXP(xp);
+  const next = xpForNextLevel(lvl);
+  const cur  = xpForLevel(lvl);
+  const pct  = next ? Math.min(100, ((xp - cur) / (next - cur)) * 100) : 100;
+
+  let badge = document.getElementById("ns-level-badge");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = "ns-level-badge";
+    badge.style.cssText = `
+      display:inline-flex;align-items:center;gap:7px;
+      background:rgba(255,215,0,0.07);border:1px solid rgba(184,150,12,0.45);
+      border-radius:20px;padding:5px 12px 5px 8px;cursor:pointer;
+      transition:all 0.22s;
+    `;
+    badge.title = "Your level & XP";
+    badge.onclick = () => showProfileModal();
+
+    // Place after profile section in top-bar
+    const profile = document.getElementById("profile");
+    if (profile && profile.parentNode) {
+      profile.parentNode.insertBefore(badge, profile.nextSibling);
+    }
+  }
+
+  const filled = Math.round(pct / 10);
+  badge.innerHTML = `
+    <span style="font-family:'Cinzel Decorative',serif;font-size:11px;color:#FFD700;letter-spacing:1px;">Lv.${lvl}</span>
+    <div style="width:52px;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+      <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#B8960C,#FFD700);border-radius:3px;transition:width 0.4s ease;"></div>
+    </div>
+    <span style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold-dim);letter-spacing:0.5px;">${xp}${next ? "/"+next : ""}</span>
+  `;
+}
+
+function showXPToast(msg) {
+  let t = document.getElementById("xp-toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "xp-toast";
+    t.style.cssText = `
+      position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(16px);
+      background:linear-gradient(135deg,#141219,#0D0B12);
+      border:1px solid rgba(255,215,0,0.55);border-radius:20px;
+      padding:9px 20px;font-family:'Cinzel',serif;font-size:12px;
+      letter-spacing:1px;color:#FFD700;
+      box-shadow:0 0 20px rgba(255,215,0,0.18),0 8px 30px rgba(0,0,0,0.65);
+      opacity:0;pointer-events:none;
+      transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+      z-index:10002;white-space:nowrap;
+    `;
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  t.style.transform = "translateX(-50%) translateY(0)";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = "0";
+    t.style.transform = "translateX(-50%) translateY(16px)";
+  }, 2800);
+}
+
+function showLevelUpPopup(lvl) {
+  const old = document.getElementById("levelup-overlay");
+  if (old) old.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "levelup-overlay";
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(5,4,10,0.88);backdrop-filter:blur(6px);
+    animation:luFadeIn 0.35s cubic-bezier(0.4,0,0.2,1);
+  `;
+
+  const unlocked = [];
+  for (let [requiredLvl, gameList] of Object.entries(LEVEL_UNLOCKS)) {
+    if (parseInt(requiredLvl) === lvl) unlocked.push(...gameList);
+  }
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes luFadeIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+      @keyframes luShine { 0%,100%{opacity:0.6} 50%{opacity:1} }
+      #lu-box {
+        background:linear-gradient(160deg,#141219,#0D0B12);
+        border:1px solid rgba(255,215,0,0.6);border-radius:24px;
+        padding:48px 40px 36px;max-width:420px;width:90%;
+        text-align:center;
+        box-shadow:0 0 80px rgba(255,215,0,0.14),0 32px 80px rgba(0,0,0,0.9);
+        position:relative;overflow:hidden;
+      }
+      #lu-box::before {
+        content:'';position:absolute;top:0;left:0;right:0;height:1px;
+        background:linear-gradient(90deg,transparent,rgba(255,215,0,0.7),transparent);
+      }
+      .lu-star { font-size:52px;display:block;margin-bottom:12px;animation:luShine 1.2s ease infinite; }
+      .lu-level { font-family:'Cinzel Decorative',serif;font-size:clamp(28px,5vw,42px);font-weight:900;color:#FFD700;
+        letter-spacing:3px;text-shadow:0 0 40px rgba(255,215,0,0.5);margin-bottom:6px; }
+      .lu-sub { font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;color:#B8960C;opacity:0.7;text-transform:uppercase;margin-bottom:24px; }
+      .lu-unlocks { font-family:'EB Garamond',serif;font-size:15px;color:#F0E6CA;line-height:1.7;margin-bottom:28px; }
+      .lu-unlocks strong { color:#FFD700;font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:8px; }
+      .lu-continue {
+        width:100%;padding:13px;
+        background:linear-gradient(135deg,#FFD700,#D4A017);
+        border:none;border-radius:30px;color:#07060A;
+        font-family:'Cinzel',serif;font-weight:700;font-size:12px;
+        letter-spacing:3px;text-transform:uppercase;
+        cursor:pointer;transition:box-shadow 0.22s;
+      }
+      .lu-continue:hover { box-shadow:0 0 28px rgba(255,215,0,0.4); }
+    </style>
+    <div id="lu-box">
+      <span class="lu-star">⭐</span>
+      <div class="lu-level">Level ${lvl}</div>
+      <div class="lu-sub">◆ Level Up! ◆</div>
+      ${unlocked.length ? `<div class="lu-unlocks"><strong>🔓 Unlocked</strong>${unlocked.join(", ")}</div>` : ""}
+      <button class="lu-continue" id="lu-close">Continue</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById("lu-close").onclick = () => overlay.remove();
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  setTimeout(() => overlay.remove(), 8000);
+}
+
+// ── Profile modal (XP details) ──
+function showProfileModal() {
+  const user = me(); if (!user) return;
+  getUserXP(user).then(xp => {
+    const lvl  = getLevelFromXP(xp);
+    const next = xpForNextLevel(lvl);
+    const cur  = xpForLevel(lvl);
+    const pct  = next ? Math.min(100, ((xp - cur) / (next - cur)) * 100) : 100;
+    const old  = document.getElementById("ns-profile-modal");
+    if (old) old.remove();
+
+    const modal = document.createElement("div");
+    modal.id = "ns-profile-modal";
+    modal.style.cssText = `
+      position:fixed;inset:0;z-index:9999;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(5,4,10,0.88);backdrop-filter:blur(6px);
+    `;
+
+    // Build level unlock list
+    let unlockHTML = "";
+    for (let [requiredLvl, gameList] of Object.entries(LEVEL_UNLOCKS)) {
+      const rl = parseInt(requiredLvl);
+      const done = lvl >= rl;
+      unlockHTML += `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,215,0,0.06);">
+          <span style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:${done ? '#2ecc71':'#B8960C'};min-width:52px;">Lv.${rl}</span>
+          <span style="font-family:'EB Garamond',serif;font-size:13px;color:${done ? '#F0E6CA':'rgba(240,230,202,0.4)'};flex:1;">${gameList.join(", ")}</span>
+          <span style="font-size:14px;">${done ? '✅' : '🔒'}</span>
+        </div>
+      `;
+    }
+
+    modal.innerHTML = `
+      <div style="background:linear-gradient(160deg,#141219,#0D0B12);border:1px solid rgba(184,150,12,0.5);border-radius:24px;padding:36px 32px 28px;max-width:440px;width:90%;position:relative;box-shadow:0 32px 80px rgba(0,0,0,0.9);">
+        <button id="pm-close" style="position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;border:1px solid rgba(184,150,12,0.3);background:transparent;color:#B8960C;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">✕</button>
+        <div style="font-family:'Cinzel Decorative',serif;font-size:18px;font-weight:900;color:#FFD700;letter-spacing:2px;margin-bottom:4px;">Level ${lvl}</div>
+        <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:#B8960C;opacity:0.7;margin-bottom:18px;text-transform:uppercase;">@${user}</div>
+        <div style="background:rgba(255,255,255,0.04);border-radius:8px;height:10px;overflow:hidden;margin-bottom:6px;">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#B8960C,#FFD700);border-radius:8px;transition:width 0.5s ease;"></div>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:#B8960C;text-align:right;margin-bottom:22px;">
+          ${xp} / ${next || xp} XP${next ? "  (" + Math.round(pct) + "%)" : "  — MAX"}
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#B8960C;opacity:0.75;text-transform:uppercase;margin-bottom:10px;">Game Unlocks</div>
+        <div style="max-height:200px;overflow-y:auto;padding-right:4px;">${unlockHTML}</div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("pm-close").onclick = () => modal.remove();
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+  });
+}
+
+// ── Init level badge on login ──
+window.addEventListener("ns_login", async (e) => {
+  const xp = await getUserXP(e.detail.username);
+  updateLevelBadge(xp);
+});
+window.addEventListener("ns_logout", () => {
+  const badge = document.getElementById("ns-level-badge");
+  if (badge) badge.remove();
+});
+if (me()) { getUserXP(me()).then(xp => updateLevelBadge(xp)); }
+
+// =====================================
+// DAILY QUESTS SYSTEM
+// =====================================
+
+const DAILY_QUESTS = [
+  { id: "play_hexasteal",     label: "Play HexAsteal for 5 min",       game: "HexAsteal",            minutes: 5,  xp: 5 },
+  { id: "play_merger",        label: "Play Merger for 5 min",           game: "Merger",               minutes: 5,  xp: 5 },
+  { id: "play_shadowbox",     label: "Play Shadow Boxing for 5 min",    game: "Shadow Boxing",        minutes: 5,  xp: 5 },
+  { id: "play_highway",       label: "Play Highway Crash for 5 min",    game: "Highway Crash",        minutes: 5,  xp: 5 },
+  { id: "play_tetricks",      label: "Play Tetricks for 5 min",         game: "Tetricks",             minutes: 5,  xp: 5 },
+  { id: "play_meme",          label: "Play Meme Rng for 5 min",         game: "Meme Rng",             minutes: 5,  xp: 5 },
+  { id: "play_cosmic",        label: "Play Cosmic Duel for 5 min",      game: "Cosmic Duel",          minutes: 5,  xp: 5 },
+  { id: "play_ringbound",     label: "Play RingBound for 5 min",        game: "RingBound",            minutes: 5,  xp: 5 },
+  { id: "play_pizza",         label: "Play Pizza Panic for 5 min",      game: "Pizza Panic",          minutes: 5,  xp: 5 },
+  { id: "play_meadow",        label: "Play Meadow Farm for 5 min",      game: "Meadow Farm",          minutes: 5,  xp: 5 },
+  { id: "play_billiards",     label: "Play 8-Ball Billiards for 5 min", game: "8-Ball Billiards",     minutes: 5,  xp: 5 },
+  { id: "play_badminton",     label: "Play Badminton Champion for 5 min",game:"Badminton Champion",   minutes: 5,  xp: 5 },
+  { id: "play_star",          label: "Play Star Runner for 5 min",      game: "Star Runner",          minutes: 5,  xp: 5 },
+  { id: "play_sqd",           label: "Play Square Dodge for 5 min",     game: "Square Dodge",         minutes: 5,  xp: 5 },
+  { id: "play_tap",           label: "Play Tap Tempo for 5 min",        game: "Tap Tempo",            minutes: 5,  xp: 5 },
+  { id: "play_build",         label: "Play Build N Defend Tower 5 min", game: "Build N Defend Tower", minutes: 5,  xp: 5 },
+  { id: "play_adventure",     label: "Play ADventure for 5 min",        game: "ADventure",            minutes: 5,  xp: 5 },
+];
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+
+function pickDailyQuests(username) {
+  // Deterministic daily selection based on username + date
+  const seed = username.split("").reduce((a,c) => a + c.charCodeAt(0), 0);
+  const dateNum = parseInt(todayKey().replace(/-/g,""));
+  const idx1 = (seed + dateNum) % DAILY_QUESTS.length;
+  const idx2 = (seed + dateNum + 7) % DAILY_QUESTS.length;
+  const idx3 = (seed + dateNum + 13) % DAILY_QUESTS.length;
+  const picked = [idx1];
+  if (idx2 !== idx1) picked.push(idx2);
+  if (idx3 !== idx1 && idx3 !== idx2) picked.push(idx3);
+  return picked.slice(0,3).map(i => DAILY_QUESTS[i]);
+}
+
+// ── Quest tracker state ──
+let _activeQuestGame = null;   // game currently being timed
+let _questTimers = {};          // { questId: { elapsed, interval, completed } }
+let _dailyQuestData = [];
+
+function getQuestStorageKey(username) {
+  return `ns_quests_${username}_${todayKey()}`;
+}
+
+function loadQuestProgress(username) {
+  try {
+    return JSON.parse(localStorage.getItem(getQuestStorageKey(username)) || "{}");
+  } catch { return {}; }
+}
+
+function saveQuestProgress(username, data) {
+  localStorage.setItem(getQuestStorageKey(username), JSON.stringify(data));
+}
+
+// ── Called when user opens a game ──
+function startQuestTimer(gameName) {
+  if (!me()) return;
+  _activeQuestGame = gameName;
+  const quests = _dailyQuestData;
+  const progress = loadQuestProgress(me());
+
+  quests.forEach(q => {
+    if (q.game !== gameName) return;
+    if (progress[q.id]?.completed) return;
+    if (_questTimers[q.id]?.interval) return; // already running
+
+    const elapsed = progress[q.id]?.elapsed || 0;
+    _questTimers[q.id] = { elapsed, completed: false };
+    _questTimers[q.id].interval = setInterval(() => {
+      _questTimers[q.id].elapsed += 1;
+      const prog = loadQuestProgress(me());
+      prog[q.id] = prog[q.id] || {};
+      prog[q.id].elapsed = _questTimers[q.id].elapsed;
+      saveQuestProgress(me(), prog);
+      updateQuestUI();
+
+      // Complete?
+      if (_questTimers[q.id].elapsed >= q.minutes * 60) {
+        clearInterval(_questTimers[q.id].interval);
+        _questTimers[q.id].completed = true;
+        prog[q.id].completed = true;
+        saveQuestProgress(me(), prog);
+        awardXP(q.xp, "Daily Quest: " + q.label);
+        updateQuestUI();
+        showXPToast("✅ Quest complete! " + q.label);
+      }
+    }, 1000);
+  });
+}
+
+// ── Called when game is closed / changed ──
+function pauseQuestTimers(gameName) {
+  if (_activeQuestGame !== gameName && gameName !== null) return;
+  Object.values(_questTimers).forEach(t => {
+    if (t && t.interval) { clearInterval(t.interval); t.interval = null; }
+  });
+  if (gameName === null) _activeQuestGame = null;
+}
+
+// ── Quest UI panel ──
+function buildQuestPanel() {
+  const user = me(); if (!user) return;
+  _dailyQuestData = pickDailyQuests(user);
+  const progress = loadQuestProgress(user);
+
+  // Remove old
+  const oldBtn = document.getElementById("quest-btn");
+  if (oldBtn) oldBtn.remove();
+  const oldPanel = document.getElementById("quest-panel");
+  if (oldPanel) oldPanel.remove();
+
+  // Floating quest button
+  const questBtn = document.createElement("button");
+  questBtn.id = "quest-btn";
+  questBtn.title = "Daily Quests";
+  questBtn.style.cssText = `
+    position:fixed;right:20px;bottom:228px;
+    width:52px;height:52px;border-radius:50%;
+    border:1px solid rgba(184,150,12,0.55);
+    background:linear-gradient(135deg,#141219,#0D0B12);
+    color:#FFD700;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:9998;font-size:22px;
+    box-shadow:0 0 18px rgba(255,215,0,0.12),0 4px 16px rgba(0,0,0,0.55);
+    transition:all 0.28s ease;
+  `;
+  questBtn.innerHTML = "📋";
+  questBtn.onmouseover = () => { questBtn.style.background = "linear-gradient(135deg,#FFD700,#D4A017)"; questBtn.style.boxShadow="0 0 30px rgba(255,215,0,0.4)"; questBtn.style.transform="scale(1.1)"; };
+  questBtn.onmouseout = () => { questBtn.style.background = "linear-gradient(135deg,#141219,#0D0B12)"; questBtn.style.boxShadow="0 0 18px rgba(255,215,0,0.12),0 4px 16px rgba(0,0,0,0.55)"; questBtn.style.transform="scale(1)"; };
+  document.body.appendChild(questBtn);
+
+  // Quest panel
+  const panel = document.createElement("div");
+  panel.id = "quest-panel";
+  panel.style.cssText = `
+    position:fixed;right:20px;bottom:90px;
+    width:300px;
+    background:linear-gradient(160deg,#141219,#0D0B12);
+    border:1px solid rgba(184,150,12,0.45);
+    border-radius:20px;
+    box-shadow:0 24px 70px rgba(0,0,0,0.8);
+    z-index:9998;display:none;
+    overflow:hidden;
+    font-family:'Cinzel',serif;
+  `;
+  document.body.appendChild(panel);
+
+  questBtn.onclick = (e) => {
+    e.stopPropagation();
+    updateQuestUI();
+    panel.style.display = panel.style.display === "none" ? "block" : "none";
+  };
+
+  document.addEventListener("click", (e) => {
+    if (!panel.contains(e.target) && e.target !== questBtn) panel.style.display = "none";
+  });
+}
+
+function updateQuestUI() {
+  const panel = document.getElementById("quest-panel");
+  if (!panel || panel.style.display === "none") return;
+  const user = me(); if (!user) return;
+  const progress = loadQuestProgress(user);
+  const quests = _dailyQuestData;
+
+  const completedCount = quests.filter(q => progress[q.id]?.completed || _questTimers[q.id]?.completed).length;
+
+  panel.innerHTML = `
+    <div style="padding:14px 16px 10px;border-bottom:1px solid rgba(184,150,12,0.2);background:linear-gradient(135deg,rgba(255,215,0,0.07),rgba(255,215,0,0.02));display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;">📋</span>
+        <span style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#FFD700;font-weight:700;">Daily Quests</span>
+      </div>
+      <span style="font-size:10px;letter-spacing:1px;color:#B8960C;">${completedCount}/${quests.length} done</span>
+    </div>
+    <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;">
+      ${quests.map(q => {
+        const prog = progress[q.id] || {};
+        const elapsed = _questTimers[q.id]?.elapsed || prog.elapsed || 0;
+        const completed = prog.completed || _questTimers[q.id]?.completed || false;
+        const isActive = _activeQuestGame === q.game && _questTimers[q.id]?.interval;
+        const targetSec = q.minutes * 60;
+        const pct = Math.min(100, (elapsed / targetSec) * 100);
+        const remaining = Math.max(0, targetSec - elapsed);
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+
+        return `
+          <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,215,0,${completed?'0.35':'0.1'});border-radius:12px;padding:10px 12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:10px;letter-spacing:0.5px;color:${completed?'#2ecc71':'#F0E6CA'};font-family:'EB Garamond',serif;font-size:13px;line-height:1.3;">${q.label}</span>
+              ${completed ? '<span style="font-size:14px;">✅</span>' : isActive ? '<span style="font-size:11px;color:#FFD700;animation:luShine 1s infinite;">⏱</span>' : '<span style="font-size:14px;opacity:0.35;">⬜</span>'}
+            </div>
+            <div style="height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-bottom:4px;">
+              <div style="height:100%;width:${pct}%;background:${completed?'linear-gradient(90deg,#2ecc71,#27ae60)':'linear-gradient(90deg,#B8960C,#FFD700)'};border-radius:3px;transition:width 0.5s;"></div>
+            </div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;color:#B8960C;opacity:0.7;display:flex;justify-content:space-between;">
+              <span>${completed ? 'Complete! +'+q.xp+' XP earned' : isActive ? `${mins}m ${secs < 10 ? '0':''}${secs}s remaining…` : `${Math.floor(elapsed/60)}m ${elapsed%60}s / ${q.minutes}m`}</span>
+              <span>+${q.xp} XP</span>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+    <div style="padding:8px 14px 12px;font-family:'EB Garamond',serif;font-style:italic;font-size:11px;color:rgba(184,150,12,0.45);text-align:center;">
+      Quests refresh daily · Play a game to start tracking
+    </div>
+  `;
+}
+
+// Refresh quest UI every second while panel is open
+setInterval(() => {
+  const panel = document.getElementById("quest-panel");
+  if (panel && panel.style.display !== "none") updateQuestUI();
+}, 1000);
+
+// ── Hook into game load/close ──
+window.addEventListener("ns_login", (e) => {
+  _questTimers = {};
+  buildQuestPanel();
+});
+window.addEventListener("ns_logout", () => {
+  pauseQuestTimers(null);
+  _questTimers = {};
+  _activeQuestGame = null;
+  _dailyQuestData = [];
+  const btn = document.getElementById("quest-btn");
+  const pnl = document.getElementById("quest-panel");
+  if (btn) btn.remove();
+  if (pnl) pnl.remove();
+});
+if (me()) { _dailyQuestData = pickDailyQuests(me()); buildQuestPanel(); }
+
+// Patch loadGameInViewer to hook quest timers
+// We watch for the custom event dispatched from within the viewer logic
+document.addEventListener("ns_game_opened", (e) => {
+  if (e.detail && e.detail.name) {
+    pauseQuestTimers(_activeQuestGame);
+    startQuestTimer(e.detail.name);
+  }
+});
+document.addEventListener("ns_game_closed", () => {
+  pauseQuestTimers(_activeQuestGame);
+  _activeQuestGame = null;
+});
+
+// Patch: emit events when games open/close
+// We do this by wrapping the global __ns_loadGame after it's set
+(function patchGameEvents() {
+  const CHECK_INTERVAL = 300;
+  let patched = false;
+  const interval = setInterval(() => {
+    if (window.__ns_loadGame && !patched) {
+      patched = true;
+      clearInterval(interval);
+      const orig = window.__ns_loadGame;
+      window.__ns_loadGame = function(game) {
+        document.dispatchEvent(new CustomEvent("ns_game_opened", { detail: { name: game.name } }));
+        return orig.call(this, game);
+      };
+    }
+    // Also patch viewer close button
+    const closeBtn = document.getElementById("viewer-close-btn");
+    if (closeBtn && !closeBtn._questPatched) {
+      closeBtn._questPatched = true;
+      closeBtn.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("ns_game_closed"));
+      });
+    }
+  }, CHECK_INTERVAL);
 })();
