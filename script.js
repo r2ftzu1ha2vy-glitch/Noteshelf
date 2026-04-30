@@ -691,43 +691,58 @@ document.addEventListener("DOMContentLoaded", () => {
   gameFrameMain.style.flex  = "1";
   document.getElementById("game-viewer-main").style.overflow = "hidden";
 
-  function buildViewerSidebar(activeName) {
-    gameViewerGrid.innerHTML = "";
-    games.forEach(g => {
-      const locked = !me() && !freeGames.has(g.name);
-      const btn    = document.createElement("button");
-      btn.className = "sidebar-game-btn" + (g.name === activeName ? " active" : "") + (locked ? " sidebar-locked" : "");
-      btn.style.position = "relative";
+function buildViewerSidebar(activeName) {
+  gameViewerGrid.innerHTML = "";
+  const userXP = window.__ns_userXP || 0;
 
-      const thumb = document.createElement("img");
-      thumb.className = "sidebar-game-thumb";
-      thumb.src = g.image || defaultImg;
-      thumb.alt = g.name;
-      if (locked) thumb.style.cssText = "filter:brightness(0.45) saturate(0.3);";
+  games.forEach(g => {
+    const loginLocked = !me() && !freeGames.has(g.name);
+    const levelLocked = me() && !isGameUnlockedByLevel(g.name, userXP);
+    const locked = loginLocked || levelLocked;
 
-      const name  = document.createElement("div");
-      name.className = "sidebar-game-name";
-      name.textContent = g.name;
+    const btn = document.createElement("button");
+    btn.className = "sidebar-game-btn" + (g.name === activeName ? " active" : "") + (locked ? " sidebar-locked" : "");
+    btn.style.position = "relative";
 
-      btn.appendChild(thumb);
-      btn.appendChild(name);
+    const thumb = document.createElement("img");
+    thumb.className = "sidebar-game-thumb";
+    thumb.src = g.image || defaultImg;
+    thumb.alt = g.name;
+    if (locked) thumb.style.cssText = "filter:brightness(0.45) saturate(0.3);";
 
-      if (locked) {
-        const lockEl = document.createElement("div");
-        lockEl.style.cssText = `
-          position:absolute;top:50%;right:8px;transform:translateY(-50%);
-          width:22px;height:22px;border-radius:50%;
-          background:rgba(255,215,0,0.1);border:1px solid rgba(184,150,12,0.5);
-          display:flex;align-items:center;justify-content:center;flex-shrink:0;
-        `;
+    const name = document.createElement("div");
+    name.className = "sidebar-game-name";
+    name.textContent = g.name;
+
+    btn.appendChild(thumb);
+    btn.appendChild(name);
+
+    if (locked) {
+      const lockEl = document.createElement("div");
+      lockEl.style.cssText = `position:absolute;top:50%;right:8px;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:rgba(255,215,0,0.1);border:1px solid rgba(184,150,12,0.5);display:flex;align-items:center;justify-content:center;flex-shrink:0;`;
+
+      if (levelLocked) {
+        const reqLvl = getRequiredLevel(g.name);
+        lockEl.style.width = "auto";
+        lockEl.style.borderRadius = "8px";
+        lockEl.style.padding = "2px 5px";
+        lockEl.innerHTML = `<span style="font-family:'Cinzel',serif;font-size:8px;color:#B8960C;letter-spacing:0.5px;">Lv.${reqLvl}</span>`;
+      } else {
         lockEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#B8960C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
-        btn.appendChild(lockEl);
       }
 
-      btn.onclick = () => loadGameInViewer(g);
-      gameViewerGrid.appendChild(btn);
-    });
-  }
+      btn.appendChild(lockEl);
+    }
+
+    btn.onclick = () => {
+      if (loginLocked) { showLoginGate(); return; }
+      if (levelLocked) { showLevelLockGate(g.name, getRequiredLevel(g.name)); return; }
+      loadGameInViewer(g);
+    };
+
+    gameViewerGrid.appendChild(btn);
+  });
+}
 
   function loadGameInViewer(game) {
     if (!me() && !freeGames.has(game.name)) { showLoginGate(); return; }
@@ -777,55 +792,80 @@ window.__ns_loadGame = function(game) {
   return _origLoadGame(game);
 };
 
-  function createGameButton(game) {
-    const user   = me();
-    const locked = !user && !freeGames.has(game.name);
-    const btn   = document.createElement("button");
-    btn.className = "game-button";
-    const img   = document.createElement("img"); img.src = game.image || defaultImg; img.alt = game.name;
-    const label = document.createElement("div"); label.textContent = game.name;
-    btn.appendChild(img); btn.appendChild(label);
+function createGameButton(game) {
+  const user = me();
+  const userXP = window.__ns_userXP || 0;
 
-    if (locked) {
-      const lockOverlay = document.createElement("div");
-      lockOverlay.className = "game-lock-overlay";
-      lockOverlay.innerHTML = `<div class="game-lock-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>`;
-      btn.appendChild(lockOverlay);
-      btn.classList.add("game-locked");
+  // Not logged in → show login lock for non-free games
+  const loginLocked = !user && !freeGames.has(game.name);
+  // Logged in but level too low
+  const levelLocked = user && !isGameUnlockedByLevel(game.name, userXP);
+  const locked = loginLocked || levelLocked;
+
+  const btn = document.createElement("button");
+  btn.className = "game-button" + (locked ? " game-locked" : "");
+  const img = document.createElement("img"); img.src = game.image || defaultImg; img.alt = game.name;
+  const label = document.createElement("div"); label.textContent = game.name;
+  btn.appendChild(img); btn.appendChild(label);
+
+  if (locked) {
+    const lockOverlay = document.createElement("div");
+    lockOverlay.className = "game-lock-overlay";
+
+    if (levelLocked) {
+      const requiredLvl = getRequiredLevel(game.name);
+      lockOverlay.innerHTML = `
+        <div class="game-lock-icon" style="flex-direction:column;gap:4px;padding:0 8px;text-align:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:#FFD700;white-space:nowrap;">Lv.${requiredLvl}</span>
+        </div>`;
+    } else {
+      lockOverlay.innerHTML = `
+        <div class="game-lock-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>`;
     }
 
-    btn.onclick = () => { if (locked) { showLoginGate(); return; } loadGameInViewer(game); };
-
-    const isMobile  = mobileGames.has(game.name);
-    const isDesktop = desktopGames.has(game.name);
-
-    if ((isMobile || isDesktop) && !locked) {
-      const tooltip  = document.createElement("div");
-      tooltip.className = "compat-tooltip";
-      let inner = "";
-      if (isMobile && isDesktop) {
-        inner = `<span class="compat-icon">${mobileSVG}</span><span class="compat-sep">+</span><span class="compat-icon">${desktopSVG}</span>`;
-      } else if (isMobile) {
-        inner = `<span class="compat-icon">${mobileSVG}</span><span class="compat-label">Mobile friendly</span>`;
-      } else {
-        inner = `<span class="compat-icon">${desktopSVG}</span><span class="compat-label">Desktop / PC</span>`;
-      }
-      tooltip.innerHTML = inner;
-      document.body.appendChild(tooltip);
-      let hoverTimer = null;
-      btn.addEventListener("mouseenter", () => {
-        hoverTimer = setTimeout(() => {
-          const rect = btn.getBoundingClientRect();
-          tooltip.style.left = (rect.left + rect.width / 2) + "px";
-          tooltip.style.top  = (rect.top - 12) + "px";
-          tooltip.style.transform = "translateX(-50%) translateY(-100%)";
-          tooltip.classList.add("visible");
-        }, 3000);
-      });
-      btn.addEventListener("mouseleave", () => { clearTimeout(hoverTimer); tooltip.classList.remove("visible"); });
-    }
-    return btn;
+    btn.appendChild(lockOverlay);
   }
+
+  btn.onclick = () => {
+    if (loginLocked) { showLoginGate(); return; }
+    if (levelLocked) { showLevelLockGate(game.name, getRequiredLevel(game.name)); return; }
+    loadGameInViewer(game);
+  };
+
+  const isMobile  = mobileGames.has(game.name);
+  const isDesktop = desktopGames.has(game.name);
+
+  if ((isMobile || isDesktop) && !locked) {
+    const tooltip = document.createElement("div");
+    tooltip.className = "compat-tooltip";
+    let inner = "";
+    if (isMobile && isDesktop) {
+      inner = `<span class="compat-icon">${mobileSVG}</span><span class="compat-sep">+</span><span class="compat-icon">${desktopSVG}</span>`;
+    } else if (isMobile) {
+      inner = `<span class="compat-icon">${mobileSVG}</span><span class="compat-label">Mobile friendly</span>`;
+    } else {
+      inner = `<span class="compat-icon">${desktopSVG}</span><span class="compat-label">Desktop / PC</span>`;
+    }
+    tooltip.innerHTML = inner;
+    document.body.appendChild(tooltip);
+    let hoverTimer = null;
+    btn.addEventListener("mouseenter", () => {
+      hoverTimer = setTimeout(() => {
+        const rect = btn.getBoundingClientRect();
+        tooltip.style.left = (rect.left + rect.width / 2) + "px";
+        tooltip.style.top  = (rect.top - 12) + "px";
+        tooltip.style.transform = "translateX(-50%) translateY(-100%)";
+        tooltip.classList.add("visible");
+      }, 3000);
+    });
+    btn.addEventListener("mouseleave", () => { clearTimeout(hoverTimer); tooltip.classList.remove("visible"); });
+  }
+
+  return btn;
+}
 
   function renderGames(filter) {
     filter = filter || "";
@@ -1094,6 +1134,47 @@ window.__ns_loadGame = function(game) {
     document.getElementById("lg-signup-btn").onclick = () => { overlay.remove(); document.getElementById("signup-btn").click(); };
     document.getElementById("lg-login-btn").onclick = () => { overlay.remove(); document.getElementById("login-btn").click(); };
   }
+  function showLevelLockGate(gameName, requiredLvl) {
+  const old = document.getElementById("level-gate-overlay");
+  if (old) old.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "level-gate-overlay";
+  overlay.style.cssText = `position:fixed;inset:0;background:rgba(5,4,10,0.92);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;animation:lgFadeIn 0.25s cubic-bezier(0.4,0,0.2,1);`;
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes lgFadeIn { from{opacity:0;transform:scale(0.94)} to{opacity:1;transform:scale(1)} }
+    </style>
+    <div style="background:linear-gradient(160deg,#141219,#0D0B12);border:1px solid rgba(184,150,12,0.5);border-radius:24px;padding:52px 44px 44px;max-width:400px;width:90%;text-align:center;position:relative;box-shadow:0 0 80px rgba(255,215,0,0.07),0 32px 80px rgba(0,0,0,0.9);">
+      <button id="lg2-close" style="position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:1px solid rgba(184,150,12,0.3);background:transparent;color:#B8960C;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,215,0,0.03));border:1px solid rgba(184,150,12,0.5);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;box-shadow:0 0 24px rgba(255,215,0,0.08);">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#B8960C;margin-bottom:10px;opacity:0.8;">Locked</div>
+      <h2 style="font-family:'Cinzel Decorative',serif;font-size:20px;font-weight:700;color:#FFD700;letter-spacing:1px;margin-bottom:12px;line-height:1.3;">${gameName}</h2>
+      <p style="font-family:'EB Garamond',serif;font-size:16px;color:#F0E6CA;line-height:1.7;margin-bottom:10px;">
+        This game unlocks at <strong style="font-family:'Cinzel',serif;color:#FFD700;">Level ${requiredLvl}</strong>.
+      </p>
+      <p style="font-family:'EB Garamond',serif;font-size:14px;color:#B8960C;opacity:0.7;margin-bottom:30px;">
+        Play other games and complete daily quests to earn XP and level up.
+      </p>
+      <button id="lg2-profile" style="width:100%;padding:13px;background:linear-gradient(135deg,#FFD700,#D4A017);border:none;border-radius:30px;color:#07060A;font-family:'Cinzel',serif;font-weight:700;font-size:12px;letter-spacing:3px;text-transform:uppercase;cursor:pointer;transition:box-shadow 0.22s;">
+        View My Progress
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.getElementById("lg2-close").onclick = () => overlay.remove();
+  document.getElementById("lg2-profile").onclick = () => { overlay.remove(); showProfileModal(); };
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+  document.addEventListener("keydown", function esc(e) {
+    if (e.key === "Escape") { overlay.remove(); document.removeEventListener("keydown", esc); }
+  });
+}
 
   function updateUIAfterLogin(username, avatar, isAdmin, isBanAdmin) {
     logoutBtn.style.display       = "inline-flex";
@@ -3026,9 +3107,11 @@ function getLevelFromXP(xp) {
 function isGameUnlockedByLevel(gameName, xp) {
   const lvl = getLevelFromXP(xp);
   for (let [requiredLvl, gameList] of Object.entries(LEVEL_UNLOCKS)) {
-    if (gameList.includes(gameName) && lvl >= parseInt(requiredLvl)) return true;
+    if (gameList.includes(gameName)) {
+      return lvl >= parseInt(requiredLvl);
+    }
   }
-  return true; // default unlocked if not in any restricted list
+  return true; // not in any restricted list = always unlocked
 }
 
 function getRequiredLevel(gameName) {
@@ -3249,13 +3332,20 @@ function showProfileModal() {
 // ── Init level badge on login ──
 window.addEventListener("ns_login", async (e) => {
   const xp = await getUserXP(e.detail.username);
+  window.__ns_userXP = xp;  // <-- add this line
   updateLevelBadge(xp);
 });
 window.addEventListener("ns_logout", () => {
+  window.__ns_userXP = 0;  // <-- add this line
   const badge = document.getElementById("ns-level-badge");
   if (badge) badge.remove();
 });
-if (me()) { getUserXP(me()).then(xp => updateLevelBadge(xp)); }
+if (me()) {
+  getUserXP(me()).then(xp => {
+    window.__ns_userXP = xp;  // <-- add this line
+    updateLevelBadge(xp);
+  });
+}
 
 // =====================================
 // DAILY QUESTS SYSTEM
