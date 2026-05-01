@@ -2613,6 +2613,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // =====================================
 // ADMIN BROADCASTS — toast stack
+// PATCHED: new events, Nyan Cat fixes, sounds
 // =====================================
 (function initAdminBroadcasts() {
   const stack = document.createElement("div");
@@ -2624,375 +2625,710 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.appendChild(stack);
 
-  function playEventOverlay(type) {
-    const old = document.getElementById("event-cat-overlay");
-    if (old) old.remove();
+  // ── Shared audio helpers ──
+  let _audioCtx = null;
+  function getAC() { if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return _audioCtx; }
+  function tone(freq, type, dur, vol, delay) {
+    try {
+      const ac = getAC(), osc = ac.createOscillator(), g = ac.createGain();
+      osc.connect(g); g.connect(ac.destination);
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, ac.currentTime + (delay || 0));
+      g.gain.setValueAtTime(vol || 0.15, ac.currentTime + (delay || 0));
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (delay || 0) + dur);
+      osc.start(ac.currentTime + (delay || 0));
+      osc.stop(ac.currentTime + (delay || 0) + dur);
+    } catch(_) {}
+  }
+  function sndCoin()     { tone(880,'sine',0.09,0.18); tone(1320,'sine',0.07,0.14,0.07); }
+  function sndCollect()  { [0,0.06,0.12].forEach((d,i) => tone(660+i*220,'sine',0.10,0.15,d)); }
+  function sndClick()    { tone(440,'sine',0.06,0.12); tone(660,'sine',0.06,0.12,0.05); }
+  function sndWhack()    { tone(220,'square',0.12,0.2); tone(150,'square',0.10,0.18,0.08); }
+  function sndMiss()     { tone(180,'sawtooth',0.10,0.12); }
+  function sndLevelUp()  { [440,550,660,880].forEach((f,i) => tone(f,'sine',0.10,0.14,i*0.10)); }
+  function sndFirework() { tone(800,'sine',0.06,0.18); tone(400,'sine',0.14,0.15,0.06); tone(200,'sawtooth',0.18,0.12,0.14); }
+  function sndDisco()    { [330,440,550,440].forEach((f,i) => tone(f,'square',0.07,0.08,i*0.12)); }
+  function sndNyanNote(freq, delay) { tone(freq,'square',0.09,0.10,delay); }
 
-    const isNyan = type && type.toLowerCase().includes("nyan");
-    const isOiia = type && (type.toLowerCase().includes("oiia") || type.toLowerCase().includes("cat"));
-
-    if (isNyan) {
-      playNyanEvent();
-    } else if (isOiia) {
-      playOiiaEvent();
-    } else {
-      playNyanEvent(); // default
+  // Nyan Cat melody loop (simplified)
+  let _nyanMelodyTimer = null;
+  function startNyanMelody() {
+    const notes = [659,784,659,523,587,659,523,440,494,523,440,349,392,440,349,
+                   294,330,349,294,247,262,294,247,208,220,247,208,175];
+    let i = 0;
+    function playNext() {
+      if (!_nyanMelodyTimer) return;
+      sndNyanNote(notes[i % notes.length], 0);
+      i++;
+      _nyanMelodyTimer = setTimeout(playNext, 160);
     }
+    _nyanMelodyTimer = setTimeout(playNext, 0);
+  }
+  function stopNyanMelody() { clearTimeout(_nyanMelodyTimer); _nyanMelodyTimer = null; }
+
+  // ── Shared CSS injected once ──
+  if (!document.getElementById('event-shared-styles')) {
+    const s = document.createElement('style');
+    s.id = 'event-shared-styles';
+    s.textContent = `
+      @keyframes evFadeIn  { from{opacity:0} to{opacity:1} }
+      @keyframes evFadeOut { from{opacity:1} to{opacity:0} }
+      @keyframes nyanFly   { 0%{left:-280px} 100%{left:calc(100vw + 20px)} }
+      @keyframes coinFall  { 0%{transform:translateY(0) rotate(0deg) scale(1);opacity:1} 80%{opacity:1} 100%{transform:translateY(340px) rotate(720deg) scale(0.4);opacity:0} }
+      @keyframes coinPop   { 0%{transform:scale(1)} 50%{transform:scale(1.7)} 100%{transform:scale(0);opacity:0} }
+      @keyframes xpFloat   { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-90px) scale(1.3)} }
+      @keyframes oiiaFloat { 0%,100%{transform:translateY(0px) rotate(-3deg)} 50%{transform:translateY(-20px) rotate(3deg)} }
+      @keyframes oiiaPop   { 0%{transform:scale(1)} 30%{transform:scale(1.28) rotate(-6deg)} 60%{transform:scale(0.9) rotate(4deg)} 100%{transform:scale(1) rotate(0deg)} }
+      @keyframes fwBurst   { 0%{transform:scale(0);opacity:1} 60%{opacity:1} 100%{transform:scale(1);opacity:0} }
+      @keyframes sparkle   { 0%{transform:translate(0,0) scale(1);opacity:1} 100%{transform:translate(var(--tx),var(--ty)) scale(0);opacity:0} }
+      @keyframes moleUp    { 0%{transform:translateY(100%)} 100%{transform:translateY(0)} }
+      @keyframes moleDown  { 0%{transform:translateY(0)} 100%{transform:translateY(100%)} }
+      @keyframes discoFlash{ 0%,100%{opacity:0.05} 50%{opacity:0.25} }
+      @keyframes rainFall  { 0%{transform:translateY(-40px) rotate(var(--r));opacity:1} 100%{transform:translateY(110vh) rotate(calc(var(--r) + 360deg));opacity:0.3} }
+      @keyframes dotBounce { 0%,80%,100%{transform:translateY(0);opacity:0.4} 40%{transform:translateY(-5px);opacity:1} }
+      .ev-overlay {
+        position:fixed;inset:0;z-index:99997;
+        background:rgba(5,4,10,0.85);backdrop-filter:blur(4px);
+        pointer-events:auto;overflow:hidden;
+        animation:evFadeIn 0.3s ease;
+      }
+      .ev-timer-bar { position:fixed;bottom:0;left:0;right:0;height:5px;background:rgba(255,255,255,0.07);z-index:99999;pointer-events:none; }
+      .ev-timer-fill { height:100%;transition:width 0.1s linear;border-radius:0 3px 3px 0; }
+      .ev-counter {
+        position:fixed;top:18px;right:24px;
+        font-family:'Cinzel',serif;font-size:14px;
+        background:rgba(7,6,10,0.88);border:1px solid rgba(255,215,0,0.5);
+        border-radius:20px;padding:8px 18px;z-index:99999;pointer-events:none;
+        color:#FFD700;letter-spacing:1px;
+      }
+      .ev-hint {
+        position:fixed;top:18px;left:50%;transform:translateX(-50%);
+        font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;
+        color:#FFD700;text-transform:uppercase;z-index:99999;pointer-events:none;
+        text-shadow:0 0 20px rgba(255,215,0,0.7);
+        animation:evFadeIn 0.5s ease;
+      }
+      .xp-coin {
+        position:fixed;font-size:30px;cursor:pointer;z-index:99998;
+        animation:coinFall 2.4s ease-in forwards;user-select:none;
+        filter:drop-shadow(0 0 8px rgba(255,215,0,0.9));
+      }
+      .xp-coin:hover { filter:drop-shadow(0 0 18px #FFD700); transform:scale(1.15); }
+      .xp-pop {
+        position:fixed;font-family:'Cinzel Decorative',serif;
+        font-size:20px;font-weight:900;color:#FFD700;
+        text-shadow:0 0 20px rgba(255,215,0,0.9);pointer-events:none;
+        z-index:99999;animation:xpFloat 0.95s ease-out forwards;
+      }
+    `;
+    document.head.appendChild(s);
   }
 
-  // ── NYAN CAT: flies left→right, XP coins drop, catch them ──
+  function makeTimerBar(color) {
+    const bar = document.createElement('div'); bar.className = 'ev-timer-bar';
+    const fill = document.createElement('div'); fill.className = 'ev-timer-fill';
+    fill.style.background = color || 'linear-gradient(90deg,#FFD700,#FF6B35)';
+    fill.style.width = '100%';
+    bar.appendChild(fill);
+    document.body.appendChild(bar);
+    return { bar, fill };
+  }
+
+  function makeCounter(text) {
+    const el = document.createElement('div'); el.className = 'ev-counter';
+    el.textContent = text;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function makeHint(text) {
+    const el = document.createElement('div'); el.className = 'ev-hint';
+    el.textContent = text;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function runTimer(duration, onTick, onEnd) {
+    const start = Date.now();
+    const id = setInterval(() => {
+      const elapsed = Date.now() - start;
+      const pct = Math.max(0, 100 - (elapsed / duration * 100));
+      onTick(pct, elapsed);
+      if (elapsed >= duration) { clearInterval(id); onEnd(); }
+    }, 100);
+    return id;
+  }
+
+  function xpPop(x, y, amount, parent) {
+    const el = document.createElement('div'); el.className = 'xp-pop';
+    el.textContent = '+' + amount + ' ⭐';
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    (parent || document.body).appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  // ── EVENT DISPATCHER ──
+  function playEventOverlay(text) {
+    const t = (text || '').toLowerCase();
+    if (t.includes('nyan'))        playNyanEvent();
+    else if (t.includes('oiia') || t.includes('cat')) playOiiaEvent();
+    else if (t.includes('coin') || t.includes('rain')) playCoinRainEvent();
+    else if (t.includes('firework') || t.includes('celebrat')) playFireworksEvent();
+    else if (t.includes('whack') || t.includes('mole')) playWhackAMoleEvent();
+    else if (t.includes('disco') || t.includes('party')) playDiscoEvent();
+    else playNyanEvent(); // default
+  }
+
+  // ══════════════════════════════════════
+  // EVENT 1 — NYAN CAT (FIXED)
+  // - No click-backdrop-to-dismiss
+  // - Melody plays
+  // - No text overlay behind cat
+  // ══════════════════════════════════════
   function playNyanEvent() {
-    const overlay = document.createElement("div");
-    overlay.id = "event-cat-overlay";
-    overlay.style.cssText = `
-      position:fixed;inset:0;z-index:99997;
-      background:rgba(5,4,10,0.82);backdrop-filter:blur(3px);
-      pointer-events:auto;overflow:hidden;
-      animation:eventFadeIn 0.3s ease;
+    const overlay = document.createElement('div');
+    overlay.id = 'event-cat-overlay';
+    overlay.className = 'ev-overlay';
+    overlay.style.cssText += ';pointer-events:none;'; // no click dismiss
+
+    // Nyan cat
+    const catWrap = document.createElement('div');
+    catWrap.style.cssText = `
+      position:absolute;top:38%;left:-280px;
+      display:flex;align-items:center;
+      animation:nyanFly 3.6s linear infinite;
+      pointer-events:none;z-index:2;
     `;
-    overlay.innerHTML = `
-      <style>
-        @keyframes eventFadeIn { from{opacity:0} to{opacity:1} }
-        @keyframes eventFadeOut { from{opacity:1} to{opacity:0} }
-        @keyframes nyanFly {
-          0%   { left:-260px; }
-          100% { left:calc(100vw + 20px); }
-        }
-        @keyframes rainbowTrail {
-          0%   { opacity:1; }
-          100% { opacity:0; transform:scaleX(0); }
-        }
-        @keyframes coinFall {
-          0%   { transform:translateY(0) rotate(0deg) scale(1); opacity:1; }
-          80%  { opacity:1; }
-          100% { transform:translateY(320px) rotate(720deg) scale(0.5); opacity:0; }
-        }
-        @keyframes coinPop {
-          0%   { transform:scale(1); }
-          50%  { transform:scale(1.6); }
-          100% { transform:scale(0); opacity:0; }
-        }
-        #nyan-cat-wrap {
-          position:absolute;
-          top:38%;
-          left:-260px;
-          display:flex;align-items:center;
-          animation:nyanFly 3.8s linear forwards;
-          pointer-events:none;
-          z-index:2;
-        }
-        #nyan-rainbow {
-          width:200px;height:80px;
-          background:linear-gradient(180deg,
-            #ff0000 0%,#ff0000 16.6%,
-            #ff8800 16.6%,#ff8800 33.2%,
-            #ffff00 33.2%,#ffff00 49.8%,
-            #00cc00 49.8%,#00cc00 66.4%,
-            #0066ff 66.4%,#0066ff 83%,
-            #9933ff 83%,#9933ff 100%);
-          border-radius:0 0 0 8px;
-          flex-shrink:0;
-          transform-origin:right center;
-        }
-        #nyan-gif {
-          width:160px;height:120px;
-          object-fit:contain;
-          flex-shrink:0;
-          image-rendering:pixelated;
-        }
-        .nyan-hint {
-          position:fixed;top:20px;left:50%;transform:translateX(-50%);
-          font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;
-          color:#FFD700;text-transform:uppercase;
-          text-shadow:0 0 20px rgba(255,215,0,0.8);
-          z-index:3;pointer-events:none;
-          animation:eventFadeIn 0.5s ease;
-        }
-        .xp-coin {
-          position:fixed;
-          font-size:28px;
-          cursor:pointer;
-          z-index:4;
-          animation:coinFall 2.2s ease-in forwards;
-          user-select:none;
-          filter:drop-shadow(0 0 8px rgba(255,215,0,0.9));
-          transition:transform 0.1s;
-        }
-        .xp-coin:hover { filter:drop-shadow(0 0 16px #FFD700); }
-        .xp-score-pop {
-          position:fixed;
-          font-family:'Cinzel Decorative',serif;
-          font-size:18px;font-weight:900;
-          color:#FFD700;
-          text-shadow:0 0 20px rgba(255,215,0,0.9);
-          pointer-events:none;
-          z-index:5;
-          animation:coinPop 0.6s ease forwards;
-        }
-        #nyan-xp-counter {
-          position:fixed;top:20px;right:28px;
-          font-family:'Cinzel Decorative',serif;
-          font-size:16px;color:#FFD700;
-          background:rgba(7,6,10,0.85);
-          border:1px solid rgba(255,215,0,0.5);
-          border-radius:20px;padding:8px 18px;
-          z-index:3;pointer-events:none;
-          text-shadow:0 0 10px rgba(255,215,0,0.5);
-        }
-        #nyan-timer-bar {
-          position:fixed;bottom:0;left:0;right:0;height:5px;
-          background:rgba(255,255,255,0.08);z-index:3;pointer-events:none;
-        }
-        #nyan-timer-fill {
-          height:100%;
-          background:linear-gradient(90deg,#ff0000,#ff8800,#ffff00,#00cc00,#0066ff,#9933ff);
-          transition:width 0.1s linear;
-        }
-      </style>
-      <div class="nyan-hint">⭐ Catch the XP coins! ⭐</div>
-      <div id="nyan-xp-counter">0 XP caught</div>
-      <div id="nyan-cat-wrap">
-        <div id="nyan-rainbow"></div>
-        <img id="nyan-gif" src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcms5Zjhhb2s3bWtlbnppZnZvMHFzNGJldXN3dWQ4czgwNjV4N3JhOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7lsw8RenVcjCM/giphy.gif" alt="Nyan Cat"/>
-      </div>
-      <div id="nyan-timer-bar"><div id="nyan-timer-fill" style="width:100%"></div></div>
+    const rainbow = document.createElement('div');
+    rainbow.style.cssText = `
+      width:210px;height:84px;flex-shrink:0;
+      background:linear-gradient(180deg,
+        #ff0000 0%,#ff0000 16.6%,#ff8800 16.6%,#ff8800 33.2%,
+        #ffff00 33.2%,#ffff00 49.8%,#00cc00 49.8%,#00cc00 66.4%,
+        #0066ff 66.4%,#0066ff 83%,#9933ff 83%,#9933ff 100%);
+      border-radius:0 0 0 8px;
     `;
+    const catImg = document.createElement('img');
+    catImg.src = 'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcms5Zjhhb2s3bWtlbnppZnZvMHFzNGJldXN3dWQ4czgwNjV4N3JhOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7lsw8RenVcjCM/giphy.gif';
+    catImg.alt = 'Nyan Cat';
+    catImg.style.cssText = 'width:160px;height:120px;object-fit:contain;flex-shrink:0;image-rendering:pixelated;';
+    catWrap.appendChild(rainbow); catWrap.appendChild(catImg);
+    overlay.appendChild(catWrap);
     document.body.appendChild(overlay);
+
+    const hint = makeHint('⭐ Catch the XP coins! ⭐');
+    const counter = makeCounter('0 XP caught');
+    const { bar, fill } = makeTimerBar('linear-gradient(90deg,#ff0000,#ff8800,#ffff00,#00cc00,#0066ff,#9933ff)');
 
     let caughtXP = 0;
-    let totalCoins = 0;
-    const counter = overlay.querySelector("#nyan-xp-counter");
-    const timerFill = overlay.querySelector("#nyan-timer-fill");
-    const DURATION = 15000; // 15 seconds
-    const start = Date.now();
+    startNyanMelody();
 
-    // Drop coins at intervals
+    // Drop coins — pointer-events enabled individually
     const coinInterval = setInterval(() => {
-      if (!document.getElementById("event-cat-overlay")) { clearInterval(coinInterval); return; }
-      const coin = document.createElement("div");
-      coin.className = "xp-coin";
-      coin.textContent = "⭐";
-      coin.style.left = (12 + Math.random() * 76) + "vw";
-      coin.style.top = (8 + Math.random() * 30) + "vh";
-      const xpVal = [5,5,5,10,10,20][Math.floor(Math.random()*6)];
-      coin.dataset.xp = xpVal;
-      totalCoins++;
-
+      if (!document.getElementById('event-cat-overlay')) { clearInterval(coinInterval); return; }
+      const coin = document.createElement('div');
+      coin.className = 'xp-coin';
+      coin.style.pointerEvents = 'auto'; // coins ARE clickable
+      coin.textContent = '⭐';
+      coin.style.left  = (10 + Math.random() * 80) + 'vw';
+      coin.style.top   = (8  + Math.random() * 32) + 'vh';
+      const xpVal = [5,5,10,10,20][Math.floor(Math.random() * 5)];
       coin.onclick = (e) => {
         e.stopPropagation();
-        coin.style.animation = "coinPop 0.4s ease forwards";
+        sndCollect();
         caughtXP += xpVal;
-        counter.textContent = caughtXP + " XP caught";
-
-        const pop = document.createElement("div");
-        pop.className = "xp-score-pop";
-        pop.textContent = "+" + xpVal + " XP";
-        pop.style.left = coin.style.left;
-        pop.style.top = (parseFloat(coin.style.top) - 4) + "vh";
-        overlay.appendChild(pop);
-        setTimeout(() => { coin.remove(); pop.remove(); }, 500);
+        counter.textContent = caughtXP + ' XP caught';
+        xpPop(e.clientX - 30, e.clientY - 24, xpVal);
+        coin.style.animation = 'coinPop 0.4s ease forwards';
+        setTimeout(() => coin.remove(), 420);
       };
+      document.body.appendChild(coin); // outside overlay so pointer-events work
+      setTimeout(() => { if (coin.parentNode) coin.remove(); }, 2600);
+    }, 580);
 
-      overlay.appendChild(coin);
-      setTimeout(() => { if (coin.parentNode) coin.remove(); }, 2500);
-    }, 600);
-
-    // Timer bar
-    const timerInterval = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const pct = Math.max(0, 100 - (elapsed / DURATION * 100));
-      timerFill.style.width = pct + "%";
-      if (elapsed >= DURATION) {
-        clearInterval(timerInterval);
+    const DURATION = 16000;
+    const timerId = runTimer(DURATION,
+      (pct) => { fill.style.width = pct + '%'; },
+      () => {
         clearInterval(coinInterval);
-        // Award XP
-        if (caughtXP > 0 && me()) {
-          awardXP(caughtXP, `Nyan Cat Event: caught ${caughtXP} XP`);
-        }
-        overlay.style.animation = "eventFadeOut 0.5s ease forwards";
-        setTimeout(() => overlay.remove(), 500);
-      }
-    }, 100);
-
-    // Click backdrop to close early (awards what was caught)
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) {
-        clearInterval(timerInterval);
-        clearInterval(coinInterval);
+        stopNyanMelody();
         if (caughtXP > 0 && me()) awardXP(caughtXP, `Nyan Cat Event: caught ${caughtXP} XP`);
-        overlay.style.animation = "eventFadeOut 0.4s ease forwards";
-        setTimeout(() => overlay.remove(), 400);
+        [overlay, hint, counter, bar].forEach(el => { el.style.animation = 'evFadeOut 0.5s ease forwards'; setTimeout(() => el.remove(), 500); });
       }
-    });
+    );
+    // Store timer so overlay close clears it
+    overlay._cleanup = () => { clearInterval(coinInterval); clearInterval(timerId); stopNyanMelody(); };
   }
 
-  // ── OIIA CAT: click the cat to earn XP ──
+  // ══════════════════════════════════════
+  // EVENT 2 — OIIA CAT (click cat for XP)
+  // ══════════════════════════════════════
   function playOiiaEvent() {
-    const overlay = document.createElement("div");
-    overlay.id = "event-cat-overlay";
-    overlay.style.cssText = `
-      position:fixed;inset:0;z-index:99997;
-      background:rgba(5,4,10,0.82);backdrop-filter:blur(3px);
-      pointer-events:auto;overflow:hidden;
-      display:flex;align-items:center;justify-content:center;
-      animation:eventFadeIn 0.3s ease;
+    const overlay = document.createElement('div');
+    overlay.id = 'event-cat-overlay';
+    overlay.className = 'ev-overlay';
+    overlay.style.cssText += ';display:flex;align-items:center;justify-content:center;';
+
+    const cat = document.createElement('img');
+    cat.id = 'oiia-cat';
+    cat.src = 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXV1d3ZvdzYycmgwZThtNHp2cjN3NG84YWR2YW5xcDBtdWRoNWpkMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/WcloH1WbGFM22NTJnW/giphy.gif';
+    cat.alt = 'OIIA Cat';
+    cat.style.cssText = `
+      width:min(240px,55vw);cursor:pointer;border-radius:20px;
+      border:3px solid rgba(255,215,0,0.5);
+      box-shadow:0 0 60px rgba(255,215,0,0.3);
+      animation:oiiaFloat 1.4s ease-in-out infinite;
+      position:relative;z-index:2;
     `;
-    overlay.innerHTML = `
-      <style>
-        @keyframes eventFadeIn { from{opacity:0} to{opacity:1} }
-        @keyframes eventFadeOut { from{opacity:1} to{opacity:0} }
-        @keyframes oiiaFloat {
-          0%,100% { transform:translateY(0px) rotate(-3deg); }
-          50%     { transform:translateY(-18px) rotate(3deg); }
-        }
-        @keyframes oiiaPop {
-          0%   { transform:scale(1); }
-          30%  { transform:scale(1.25) rotate(-6deg); }
-          60%  { transform:scale(0.92) rotate(4deg); }
-          100% { transform:scale(1) rotate(0deg); }
-        }
-        @keyframes xpFloat {
-          0%   { opacity:1; transform:translateY(0) scale(1); }
-          100% { opacity:0; transform:translateY(-80px) scale(1.3); }
-        }
-        #oiia-cat {
-          width:min(240px,55vw);
-          cursor:pointer;
-          border-radius:20px;
-          border:3px solid rgba(255,215,0,0.5);
-          box-shadow:0 0 60px rgba(255,215,0,0.3);
-          animation:oiiaFloat 1.4s ease-in-out infinite;
-          image-rendering:auto;
-          position:relative;z-index:2;
-        }
-        #oiia-cat:active { transform:scale(0.92); }
-        #oiia-info {
-          position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
-          text-align:center;pointer-events:none;z-index:3;
-        }
-        #oiia-click-count {
-          font-family:'Cinzel Decorative',serif;
-          font-size:clamp(20px,4vw,32px);color:#FFD700;
-          text-shadow:0 0 20px rgba(255,215,0,0.8);
-          margin-bottom:6px;
-        }
-        #oiia-hint {
-          font-family:'Cinzel',serif;font-size:11px;
-          letter-spacing:3px;color:rgba(255,215,0,0.55);
-          text-transform:uppercase;
-        }
-        .oiia-xp-pop {
-          position:fixed;
-          font-family:'Cinzel Decorative',serif;
-          font-size:22px;font-weight:900;color:#FFD700;
-          text-shadow:0 0 16px rgba(255,215,0,0.9);
-          pointer-events:none;z-index:5;
-          animation:xpFloat 0.9s ease-out forwards;
-        }
-        #oiia-timer-bar {
-          position:fixed;bottom:0;left:0;right:0;height:5px;
-          background:rgba(255,255,255,0.08);z-index:3;pointer-events:none;
-        }
-        #oiia-timer-fill {
-          height:100%;background:linear-gradient(90deg,#FFD700,#FF6B35);
-          transition:width 0.1s linear;
-        }
-        #oiia-close-hint {
-          position:fixed;top:18px;left:50%;transform:translateX(-50%);
-          font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;
-          color:rgba(255,215,0,0.45);text-transform:uppercase;pointer-events:none;
-        }
-      </style>
-      <div id="oiia-close-hint">Click the cat — earn XP!</div>
-      <img id="oiia-cat" src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaXV1d3ZvdzYycmgwZThtNHp2cjN3NG84YWR2YW5xcDBtdWRoNWpkMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/WcloH1WbGFM22NTJnW/giphy.gif" alt="OIIA Cat"/>
-      <div id="oiia-info">
-        <div id="oiia-click-count">0 clicks</div>
-        <div id="oiia-hint">Each click = +3 XP</div>
-      </div>
-      <div id="oiia-timer-bar"><div id="oiia-timer-fill" style="width:100%"></div></div>
-    `;
+    overlay.appendChild(cat);
     document.body.appendChild(overlay);
 
-    let clicks = 0;
-    let totalXP = 0;
-    const cat = overlay.querySelector("#oiia-cat");
-    const clickCount = overlay.querySelector("#oiia-click-count");
-    const timerFill = overlay.querySelector("#oiia-timer-fill");
-    const DURATION = 12000;
-    const start = Date.now();
-    const XP_PER_CLICK = 3;
+    const hint    = makeHint('Click the cat — earn XP!');
+    const counter = makeCounter('0 XP · 0 clicks');
+    const { bar, fill } = makeTimerBar('linear-gradient(90deg,#FFD700,#D4A017)');
 
-    cat.addEventListener("click", (e) => {
+    let clicks = 0, totalXP = 0;
+    const XP_PER = 3;
+
+    cat.addEventListener('click', (e) => {
       e.stopPropagation();
-      clicks++;
-      totalXP += XP_PER_CLICK;
-      clickCount.textContent = clicks + (clicks === 1 ? " click" : " clicks") + " · " + totalXP + " XP";
-
-      // Animate
-      cat.style.animation = "none";
+      clicks++; totalXP += XP_PER;
+      counter.textContent = totalXP + ' XP · ' + clicks + ' clicks';
+      sndClick();
+      cat.style.animation = 'none';
       void cat.offsetWidth;
-      cat.style.animation = "oiiaPop 0.3s ease, oiiaFloat 1.4s ease-in-out 0.3s infinite";
-
-      // XP pop at cursor
-      const pop = document.createElement("div");
-      pop.className = "oiia-xp-pop";
-      pop.textContent = "+3 ⭐";
-      pop.style.left = (e.clientX - 30) + "px";
-      pop.style.top  = (e.clientY - 20) + "px";
-      overlay.appendChild(pop);
-      setTimeout(() => pop.remove(), 950);
+      cat.style.animation = 'oiiaPop 0.3s ease, oiiaFloat 1.4s ease-in-out 0.3s infinite';
+      xpPop(e.clientX - 28, e.clientY - 20, XP_PER);
     });
 
-    const timerInterval = setInterval(() => {
-      const elapsed = Date.now() - start;
-      const pct = Math.max(0, 100 - (elapsed / DURATION * 100));
-      timerFill.style.width = pct + "%";
-      if (elapsed >= DURATION) {
-        clearInterval(timerInterval);
+    const DURATION = 12000;
+    runTimer(DURATION,
+      (pct) => { fill.style.width = pct + '%'; },
+      () => {
         if (totalXP > 0 && me()) awardXP(totalXP, `OIIA Cat Event: ${clicks} clicks = ${totalXP} XP`);
-        overlay.style.animation = "eventFadeOut 0.5s ease forwards";
-        setTimeout(() => overlay.remove(), 500);
+        [overlay, hint, counter, bar].forEach(el => { el.style.animation = 'evFadeOut 0.5s ease forwards'; setTimeout(() => el.remove(), 500); });
       }
-    }, 100);
-
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) {
-        clearInterval(timerInterval);
-        if (totalXP > 0 && me()) awardXP(totalXP, `OIIA Cat Event: ${clicks} clicks = ${totalXP} XP`);
-        overlay.style.animation = "eventFadeOut 0.4s ease forwards";
-        setTimeout(() => overlay.remove(), 400);
-      }
-    });
+    );
   }
 
+  // ══════════════════════════════════════
+  // EVENT 3 — COIN RAIN
+  // Golden coins fall from top, click them
+  // ══════════════════════════════════════
+  function playCoinRainEvent() {
+    const overlay = document.createElement('div');
+    overlay.id = 'event-cat-overlay';
+    overlay.className = 'ev-overlay';
+    overlay.style.pointerEvents = 'none';
+    document.body.appendChild(overlay);
+
+    const hint    = makeHint('🪙 Click the falling coins!');
+    const counter = makeCounter('0 XP');
+    const { bar, fill } = makeTimerBar('linear-gradient(90deg,#FFD700,#B8960C)');
+
+    let total = 0;
+    const COINS = ['🪙','💰','⭐','🏆'];
+    const vals  = [3, 5, 10, 20];
+
+    const rainInterval = setInterval(() => {
+      if (!document.getElementById('event-cat-overlay')) { clearInterval(rainInterval); return; }
+      const emoji = COINS[Math.floor(Math.random() * COINS.length)];
+      const xp    = vals[COINS.indexOf(emoji)];
+      const coin  = document.createElement('div');
+      coin.style.cssText = `
+        position:fixed;
+        font-size:${emoji === '🏆' ? 36 : 28}px;
+        left:${(5 + Math.random() * 90)}vw;
+        top:-40px;
+        cursor:pointer;
+        z-index:99998;
+        pointer-events:auto;
+        user-select:none;
+        --r:${(Math.random()-0.5)*60}deg;
+        animation:rainFall ${1.8 + Math.random() * 2.4}s linear forwards;
+        filter:drop-shadow(0 0 6px rgba(255,215,0,0.8));
+      `;
+      coin.textContent = emoji;
+      coin.onclick = (e) => {
+        e.stopPropagation();
+        sndCoin();
+        total += xp;
+        counter.textContent = total + ' XP';
+        xpPop(e.clientX - 28, e.clientY - 20, xp);
+        coin.style.animation = 'coinPop 0.35s ease forwards';
+        setTimeout(() => coin.remove(), 380);
+      };
+      document.body.appendChild(coin);
+      setTimeout(() => { if (coin.parentNode) coin.remove(); }, 4600);
+    }, 400);
+
+    const DURATION = 15000;
+    runTimer(DURATION,
+      (pct) => { fill.style.width = pct + '%'; },
+      () => {
+        clearInterval(rainInterval);
+        if (total > 0 && me()) awardXP(total, `Coin Rain Event: ${total} XP`);
+        [overlay, hint, counter, bar].forEach(el => { el.style.animation = 'evFadeOut 0.5s ease forwards'; setTimeout(() => el.remove(), 500); });
+      }
+    );
+  }
+
+  // ══════════════════════════════════════
+  // EVENT 4 — FIREWORKS CELEBRATION
+  // Auto-plays fireworks, tap screen for bonus
+  // ══════════════════════════════════════
+  function playFireworksEvent() {
+    const overlay = document.createElement('div');
+    overlay.id = 'event-cat-overlay';
+    overlay.className = 'ev-overlay';
+    overlay.style.cssText += ';background:rgba(5,4,10,0.9);pointer-events:auto;';
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    overlay.appendChild(canvas);
+    document.body.appendChild(overlay);
+
+    const hint    = makeHint('🎆 Tap anywhere for bonus XP!');
+    const counter = makeCounter('0 XP');
+    const { bar, fill } = makeTimerBar('linear-gradient(90deg,#ff69b4,#FFD700,#ff69b4)');
+
+    const ctx2d = canvas.getContext('2d');
+    const particles = [];
+    let total = 0;
+
+    function spawnFirework(x, y, auto) {
+      sndFirework();
+      const colors = ['#FFD700','#ff69b4','#00cfff','#ff6b35','#a0ff80','#ffffff'];
+      for (let i = 0; i < 50; i++) {
+        const angle = (Math.PI * 2 / 50) * i + Math.random() * 0.2;
+        const speed = 2 + Math.random() * 5;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1, size: 3 + Math.random() * 3, life: 0,
+        });
+      }
+      if (!auto && me()) {
+        const bonus = 5;
+        total += bonus;
+        counter.textContent = total + ' XP';
+        xpPop(x - 28, y - 20, bonus);
+      }
+    }
+
+    overlay.onclick = (e) => { spawnFirework(e.clientX, e.clientY, false); };
+
+    let animId;
+    function draw() {
+      ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.08; p.vx *= 0.99;
+        p.alpha -= 0.016; p.life++;
+        if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+        ctx2d.globalAlpha = p.alpha;
+        ctx2d.fillStyle   = p.color;
+        ctx2d.beginPath();
+        ctx2d.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx2d.fill();
+      }
+      ctx2d.globalAlpha = 1;
+      animId = requestAnimationFrame(draw);
+    }
+    draw();
+
+    // Auto-launch fireworks
+    const autoInterval = setInterval(() => {
+      if (!document.getElementById('event-cat-overlay')) { clearInterval(autoInterval); return; }
+      spawnFirework(
+        80 + Math.random() * (window.innerWidth - 160),
+        80 + Math.random() * (window.innerHeight * 0.6),
+        true
+      );
+    }, 900);
+
+    const DURATION = 14000;
+    runTimer(DURATION,
+      (pct) => { fill.style.width = pct + '%'; },
+      () => {
+        clearInterval(autoInterval);
+        cancelAnimationFrame(animId);
+        if (total > 0 && me()) awardXP(total, `Fireworks Event: ${total} XP`);
+        [overlay, hint, counter, bar].forEach(el => { el.style.animation = 'evFadeOut 0.5s ease forwards'; setTimeout(() => el.remove(), 500); });
+      }
+    );
+  }
+
+  // ══════════════════════════════════════
+  // EVENT 5 — WHACK-A-MOLE
+  // Moles pop up from holes, click them
+  // ══════════════════════════════════════
+  function playWhackAMoleEvent() {
+    const overlay = document.createElement('div');
+    overlay.id = 'event-cat-overlay';
+    overlay.className = 'ev-overlay';
+    overlay.style.cssText += ';display:flex;align-items:center;justify-content:center;';
+
+    const GRID = 9, COLS = 3, SIZE = 90;
+    const board = document.createElement('div');
+    board.style.cssText = `
+      display:grid;
+      grid-template-columns:repeat(${COLS},${SIZE}px);
+      grid-template-rows:repeat(${GRID/COLS},${SIZE}px);
+      gap:14px;position:relative;z-index:2;
+    `;
+
+    const holes = [];
+    for (let i = 0; i < GRID; i++) {
+      const hole = document.createElement('div');
+      hole.style.cssText = `
+        width:${SIZE}px;height:${SIZE}px;
+        border-radius:50%;
+        background:radial-gradient(circle at 40% 40%,#2a1f10,#0D0B12);
+        border:2px solid rgba(184,150,12,0.35);
+        position:relative;overflow:hidden;cursor:pointer;
+      `;
+      const mole = document.createElement('div');
+      mole.style.cssText = `
+        position:absolute;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);
+        font-size:44px;transition:transform 0.18s ease;user-select:none;
+        line-height:1;will-change:transform;
+      `;
+      mole.textContent = '🐹';
+      mole._up = false;
+      hole.appendChild(mole);
+      hole.onclick = () => {
+        if (!mole._up) { sndMiss(); return; }
+        sndWhack();
+        mole.textContent = '💫';
+        setTimeout(() => { mole.textContent = '🐹'; }, 250);
+        total += 10;
+        counter.textContent = total + ' XP · ' + hits + ' hits';
+        hits++;
+        mole._up = false;
+        mole.style.transform = 'translateX(-50%) translateY(100%)';
+        xpPop(
+          hole.getBoundingClientRect().left + SIZE/2 - 24,
+          hole.getBoundingClientRect().top - 10,
+          10
+        );
+      };
+      board.appendChild(hole);
+      holes.push({ hole, mole });
+    }
+    overlay.appendChild(board);
+    document.body.appendChild(overlay);
+
+    const hint    = makeHint('🐹 Whack the moles!');
+    const counter = makeCounter('0 XP · 0 hits');
+    const { bar, fill } = makeTimerBar('linear-gradient(90deg,#B8960C,#FFD700,#2ecc71)');
+
+    let total = 0, hits = 0;
+
+    function popMole(idx) {
+      const { mole } = holes[idx];
+      if (mole._up) return;
+      mole._up = true;
+      mole.style.transform = 'translateX(-50%) translateY(0)';
+      setTimeout(() => {
+        if (mole._up) {
+          mole._up = false;
+          mole.style.transform = 'translateX(-50%) translateY(100%)';
+        }
+      }, 900 + Math.random() * 600);
+    }
+
+    const moleInterval = setInterval(() => {
+      if (!document.getElementById('event-cat-overlay')) { clearInterval(moleInterval); return; }
+      const available = holes.map((_,i) => i).filter(i => !holes[i].mole._up);
+      if (available.length) {
+        const n = Math.min(1 + Math.floor(Math.random() * 2), available.length);
+        for (let k = 0; k < n; k++) {
+          const pick = available.splice(Math.floor(Math.random() * available.length), 1)[0];
+          popMole(pick);
+        }
+      }
+    }, 700);
+
+    const DURATION = 18000;
+    runTimer(DURATION,
+      (pct) => { fill.style.width = pct + '%'; },
+      () => {
+        clearInterval(moleInterval);
+        if (total > 0 && me()) awardXP(total, `Whack-a-Mole Event: ${hits} hits = ${total} XP`);
+        [overlay, hint, counter, bar].forEach(el => { el.style.animation = 'evFadeOut 0.5s ease forwards'; setTimeout(() => el.remove(), 500); });
+      }
+    );
+  }
+
+  // ══════════════════════════════════════
+  // EVENT 6 — DISCO PARTY
+  // Colored tiles flash, match the lit tile for XP
+  // ══════════════════════════════════════
+  function playDiscoEvent() {
+    const overlay = document.createElement('div');
+    overlay.id = 'event-cat-overlay';
+    overlay.className = 'ev-overlay';
+    overlay.style.cssText += ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;';
+
+    // Flashing background lights
+    const bgFlash = document.createElement('div');
+    bgFlash.style.cssText = `
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(135deg,rgba(255,0,200,0.12),rgba(0,200,255,0.12));
+      animation:discoFlash 0.4s ease-in-out infinite;
+    `;
+    overlay.appendChild(bgFlash);
+
+    const COLORS = [
+      { bg:'#ff0080', label:'PINK' },
+      { bg:'#00cfff', label:'BLUE' },
+      { bg:'#FFD700', label:'GOLD' },
+      { bg:'#00ff80', label:'GREEN' },
+    ];
+
+    const prompt = document.createElement('div');
+    prompt.style.cssText = `
+      font-family:'Cinzel Decorative',serif;font-size:clamp(18px,4vw,30px);
+      color:#FFD700;letter-spacing:4px;z-index:2;
+      text-shadow:0 0 20px rgba(255,215,0,0.8);
+    `;
+    prompt.textContent = 'GET READY!';
+
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;z-index:2;';
+
+    const tiles = COLORS.map(c => {
+      const tile = document.createElement('button');
+      tile.style.cssText = `
+        width:min(130px,28vw);height:min(130px,28vw);
+        border-radius:18px;border:3px solid rgba(255,255,255,0.25);
+        background:${c.bg}22;
+        font-family:'Cinzel',serif;font-size:12px;letter-spacing:2px;
+        color:rgba(255,255,255,0.5);cursor:pointer;
+        transition:all 0.12s ease;
+        position:relative;overflow:hidden;
+      `;
+      tile.textContent = c.label;
+      tile._color = c.bg;
+      tile._label = c.label;
+      grid.appendChild(tile);
+      return tile;
+    });
+
+    overlay.appendChild(prompt);
+    overlay.appendChild(grid);
+    document.body.appendChild(overlay);
+
+    const hint    = makeHint('🕺 Tap the lit colour!');
+    const counter = makeCounter('0 XP');
+    const { bar, fill } = makeTimerBar('linear-gradient(90deg,#ff0080,#00cfff,#FFD700,#00ff80)');
+
+    let total = 0;
+    let currentTarget = null;
+    let promptTimer = null;
+
+    function flashTarget() {
+      // Reset all tiles
+      tiles.forEach(t => {
+        t.style.background = t._color + '22';
+        t.style.color = 'rgba(255,255,255,0.5)';
+        t.style.boxShadow = 'none';
+        t.style.border = '3px solid rgba(255,255,255,0.25)';
+        t.style.transform = 'scale(1)';
+      });
+
+      const idx = Math.floor(Math.random() * COLORS.length);
+      currentTarget = COLORS[idx].label;
+      const target = tiles[idx];
+      target.style.background = COLORS[idx].bg + 'cc';
+      target.style.color = '#fff';
+      target.style.boxShadow = `0 0 28px ${COLORS[idx].bg}, 0 0 60px ${COLORS[idx].bg}55`;
+      target.style.border = `3px solid ${COLORS[idx].bg}`;
+      target.style.transform = 'scale(1.06)';
+      prompt.textContent = 'TAP → ' + COLORS[idx].label;
+      prompt.style.color = COLORS[idx].bg;
+      sndDisco();
+
+      promptTimer = setTimeout(() => {
+        currentTarget = null;
+        prompt.textContent = '⏱ TOO SLOW!';
+        prompt.style.color = '#ff6b6b';
+        tiles.forEach(t => { t.style.background = t._color + '22'; t.style.color = 'rgba(255,255,255,0.5)'; t.style.boxShadow = 'none'; t.style.border = '3px solid rgba(255,255,255,0.25)'; t.style.transform = 'scale(1)'; });
+        setTimeout(flashTarget, 900);
+      }, 1500);
+    }
+
+    tiles.forEach(tile => {
+      tile.addEventListener('click', () => {
+        if (!currentTarget) return;
+        if (tile._label === currentTarget) {
+          clearTimeout(promptTimer);
+          sndLevelUp();
+          total += 8;
+          counter.textContent = total + ' XP';
+          const r = tile.getBoundingClientRect();
+          xpPop(r.left + r.width/2 - 28, r.top - 12, 8);
+          prompt.textContent = '✓ CORRECT!';
+          prompt.style.color = '#FFD700';
+          currentTarget = null;
+          tiles.forEach(t => { t.style.transform = 'scale(1)'; t.style.boxShadow = 'none'; });
+          setTimeout(flashTarget, 700);
+        } else {
+          sndMiss();
+          tile.style.background = '#ff6b6b44';
+          setTimeout(() => { tile.style.background = tile._color + '22'; }, 300);
+          prompt.textContent = '✗ WRONG!';
+          prompt.style.color = '#ff6b6b';
+        }
+      });
+    });
+
+    setTimeout(flashTarget, 1200);
+
+    const DURATION = 20000;
+    runTimer(DURATION,
+      (pct) => { fill.style.width = pct + '%'; },
+      () => {
+        clearTimeout(promptTimer);
+        if (total > 0 && me()) awardXP(total, `Disco Event: ${total} XP`);
+        [overlay, hint, counter, bar].forEach(el => { el.style.animation = 'evFadeOut 0.5s ease forwards'; setTimeout(() => el.remove(), 500); });
+      }
+    );
+  }
+
+  // ── TOAST (announcement/event banner) ──
   const ICONS = {
     announcement: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>`,
     event: `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`,
   };
-  const LABELS = { announcement: "ANNOUNCEMENT", event: "EVENT" };
+  const LABELS = { announcement: 'ANNOUNCEMENT', event: 'EVENT' };
   const COLORS = {
-    announcement: { bg: "linear-gradient(135deg,#141219,#0D0B12)", border: "rgba(255,215,0,0.6)", accent: "#FFD700", label: "#B8960C" },
-    event:        { bg: "linear-gradient(135deg,#1a1010,#120D0D)",  border: "rgba(255,107,53,0.6)",  accent: "#FF6B35",  label: "#C0502A" },
+    announcement: { bg:'linear-gradient(135deg,#141219,#0D0B12)', border:'rgba(255,215,0,0.6)', accent:'#FFD700', label:'#B8960C' },
+    event:        { bg:'linear-gradient(135deg,#1a1010,#120D0D)',  border:'rgba(255,107,53,0.6)',  accent:'#FF6B35',  label:'#C0502A' },
   };
 
   const seen = new Set();
   let startTime = Date.now();
 
-  db.ref("admin_broadcasts").orderByChild("sentAt").startAt(startTime).on("child_added", snap => {
+  db.ref('admin_broadcasts').orderByChild('sentAt').startAt(startTime).on('child_added', snap => {
     if (seen.has(snap.key)) return;
     seen.add(snap.key);
     const data = snap.val();
     if (!data || !data.text) return;
 
-    if (data.type === "event") playEventOverlay(data.text);
+    if (data.type === 'event') playEventOverlay(data.text);
 
     const c = COLORS[data.type] || COLORS.announcement;
-    const toast = document.createElement("div");
+    const toast = document.createElement('div');
     toast.style.cssText = `
       pointer-events:auto;
-      background:${c.bg};
-      border:1px solid ${c.border};
-      border-radius:16px;
+      background:${c.bg};border:1px solid ${c.border};border-radius:16px;
       padding:14px 18px 14px 16px;
       box-shadow:0 8px 40px rgba(0,0,0,0.75);
       display:flex;align-items:flex-start;gap:12px;
@@ -3001,64 +3337,40 @@ document.addEventListener('DOMContentLoaded', () => {
       transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1),transform 0.3s cubic-bezier(0.4,0,0.2,1);
     `;
 
-    const av = document.createElement("div");
+    const av = document.createElement('div');
     av.style.cssText = `width:36px;height:36px;border-radius:50%;flex-shrink:0;overflow:hidden;border:1px solid ${c.border};display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:${c.accent};background:rgba(255,255,255,0.05);`;
     if (data.avatar) {
-      const img = document.createElement("img");
-      img.src = data.avatar;
-      img.style.cssText = "width:100%;height:100%;object-fit:cover;";
-      img.onerror = () => { av.innerHTML = ""; av.textContent = (data.sentBy||"A").charAt(0).toUpperCase(); };
+      const img = document.createElement('img');
+      img.src = data.avatar; img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.onerror = () => { av.innerHTML = ''; av.textContent = (data.sentBy||'A').charAt(0).toUpperCase(); };
       av.appendChild(img);
-    } else {
-      av.textContent = (data.sentBy||"A").charAt(0).toUpperCase();
-    }
+    } else { av.textContent = (data.sentBy||'A').charAt(0).toUpperCase(); }
 
-    const body = document.createElement("div");
-    body.style.cssText = "flex:1;min-width:0;";
-
-    const header = document.createElement("div");
-    header.style.cssText = "display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap;";
-
-    const labelPill = document.createElement("span");
-    labelPill.style.cssText = `font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;font-weight:700;color:${c.accent};background:rgba(255,255,255,0.05);border:1px solid ${c.border};border-radius:20px;padding:2px 9px;display:inline-flex;align-items:center;gap:5px;`;
-    labelPill.innerHTML = ICONS[data.type] + (LABELS[data.type] || "MESSAGE");
-
-    const sender = document.createElement("span");
+    const body = document.createElement('div'); body.style.cssText = 'flex:1;min-width:0;';
+    const header = document.createElement('div'); header.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap;';
+    const lp = document.createElement('span');
+    lp.style.cssText = `font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;font-weight:700;color:${c.accent};background:rgba(255,255,255,0.05);border:1px solid ${c.border};border-radius:20px;padding:2px 9px;display:inline-flex;align-items:center;gap:5px;`;
+    lp.innerHTML = ICONS[data.type] + (LABELS[data.type] || 'MESSAGE');
+    const sender = document.createElement('span');
     sender.style.cssText = `font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:${c.label};`;
-    sender.textContent = data.sentBy || "Admin";
-
-    header.appendChild(labelPill);
-    header.appendChild(sender);
-
-    const msg = document.createElement("div");
+    sender.textContent = data.sentBy || 'Admin';
+    header.appendChild(lp); header.appendChild(sender);
+    const msg = document.createElement('div');
     msg.style.cssText = "font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#F0E6CA;word-break:break-word;";
     msg.textContent = data.text;
+    body.appendChild(header); body.appendChild(msg);
 
-    body.appendChild(header);
-    body.appendChild(msg);
-
-    const closeBtn = document.createElement("button");
-    closeBtn.style.cssText = `width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(240,230,202,0.4);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;pointer-events:auto;transition:all 0.2s;`;
+    const closeBtn = document.createElement('button');
+    closeBtn.style.cssText = 'width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:transparent;color:rgba(240,230,202,0.4);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;transition:all 0.2s;';
     closeBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
-    closeBtn.onmouseover = () => { closeBtn.style.borderColor = "rgba(255,107,107,0.5)"; closeBtn.style.color = "#ff6b6b"; };
-    closeBtn.onmouseout  = () => { closeBtn.style.borderColor = "rgba(255,255,255,0.12)"; closeBtn.style.color = "rgba(240,230,202,0.4)"; };
+    closeBtn.onmouseover = () => { closeBtn.style.borderColor='rgba(255,107,107,0.5)'; closeBtn.style.color='#ff6b6b'; };
+    closeBtn.onmouseout  = () => { closeBtn.style.borderColor='rgba(255,255,255,0.12)'; closeBtn.style.color='rgba(240,230,202,0.4)'; };
 
-    toast.appendChild(av);
-    toast.appendChild(body);
-    toast.appendChild(closeBtn);
+    toast.appendChild(av); toast.appendChild(body); toast.appendChild(closeBtn);
     stack.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity='1'; toast.style.transform='translateY(0) scale(1)'; });
 
-    requestAnimationFrame(() => {
-      toast.style.opacity = "1";
-      toast.style.transform = "translateY(0) scale(1)";
-    });
-
-    function dismiss() {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(-8px) scale(0.95)";
-      setTimeout(() => toast.remove(), 300);
-    }
-
+    function dismiss() { toast.style.opacity='0'; toast.style.transform='translateY(-8px) scale(0.95)'; setTimeout(() => toast.remove(), 300); }
     closeBtn.onclick = dismiss;
     setTimeout(dismiss, 8000);
   });
