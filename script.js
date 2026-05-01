@@ -3403,7 +3403,7 @@ const LEVEL_UNLOCKS = {
   3: ["Highway Crash","RingBound"],
   4: ["Cosmic Duel","Pizza Panic"],
   5: ["8-Ball Billiards","Meadow Farm"],
-  6: ["HexAsteal"],
+  6: ["HexAsteal", "Vaults"],
 };
 
 function xpForLevel(lvl) { return LEVEL_THRESHOLDS[Math.min(lvl - 1, LEVEL_THRESHOLDS.length - 1)] || 0; }
