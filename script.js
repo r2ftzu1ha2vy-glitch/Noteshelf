@@ -746,6 +746,8 @@ function buildViewerSidebar(activeName) {
 }
 
   function loadGameInViewer(game) {
+    pauseQuestTimers(_activeQuestGame);
+    startQuestTimer(game.name);
     if (!me() && !freeGames.has(game.name)) { showLoginGate(); return; }
     currentGameUrl  = game.url;
     currentGameName = game.name;
